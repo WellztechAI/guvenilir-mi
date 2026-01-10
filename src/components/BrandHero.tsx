@@ -2,15 +2,39 @@ import React from 'react';
 
 export const BrandHero: React.FC = () => {
   return (
-    <section className="bg-neutral-50 flex w-full max-w-[1357px] flex-col mt-[99px] pb-[47px] rounded-3xl max-md:max-w-full max-md:mt-10">
-      <img
-        src="https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"
-        alt="Brand cover"
-        className="aspect-[6.13] object-contain w-full z-10 mt-[-99px] mr-[-41px] max-md:max-w-full"
+    <section className="w-full -mt-3">
+      {/* Full-width hero image */}
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+        <img
+          src="https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"
+          alt="Brand cover"
+          className="w-full h-[300px] object-cover"
+        />
+      </div>
+
+      {/* Purple to white gradient */}
+      <div
+        className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-24"
+        style={{
+          background: 'linear-gradient(180deg, #2D1B69 0%, #4C38A5 30%, #8B7BC7 60%, #FFFFFF 100%)',
+          height: '200px',
+        }}
       />
-      <div className="self-stretch z-10 flex mt-[-47px] w-full flex-col items-stretch px-9 max-md:max-w-full max-md:pl-5">
-        <div className="bg-[rgba(242,242,242,0.08)] shadow-[0px_0px_0px_1px_rgba(255,255,255,0.12)] border w-full overflow-hidden pt-3 pb-[27px] px-2 rounded-3xl border-[rgba(0,0,0,0.6)] border-solid max-md:max-w-full">
-          <div className="flex w-full max-w-[1248px] gap-5 text-white font-normal text-center flex-wrap justify-between ml-4 mr-[21px] max-md:max-w-full max-md:mr-2.5">
+
+      {/* Semi-transparent container */}
+      <div className="max-w-[1357px] mx-auto px-4 -mt-[280px] relative z-10">
+        <div
+          className="rounded-3xl border overflow-hidden"
+          style={{
+            background: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {/* Top bar with warning and button */}
+          <div className="flex w-full gap-5 text-white font-normal text-center flex-wrap justify-between p-4">
             <div className="bg-[rgba(218,72,72,1)] shadow-[0px_0px_0px_1px_rgba(0,0,0,0.25)] border flex items-stretch gap-1 overflow-hidden text-xs tracking-[-0.48px] leading-loose px-2.5 py-1 rounded-[50px] border-[rgba(255,255,255,0.24)] border-solid">
               <img
                 src="https://api.builder.io/api/v1/image/assets/TEMP/70a0d4025f9d44e4a4f4b6ba8ce7ebe376c813fb?placeholderIfAbsent=true"
@@ -25,15 +49,19 @@ export const BrandHero: React.FC = () => {
               <div>Doğrulamayı Başlat</div>
             </button>
           </div>
+
+          {/* Rating stars bar */}
           <img
             src="https://api.builder.io/api/v1/image/assets/TEMP/a16487835b4692dc8184f75f00d8165f2c25f6c0?placeholderIfAbsent=true"
             alt="Brand banner"
-            className="aspect-[1000] object-contain w-full mt-3 max-md:max-w-full"
+            className="aspect-[1000] object-contain w-full px-2 max-md:max-w-full"
           />
-          <div className="ml-3.5 mr-[21px] mt-[29px] max-md:max-w-full max-md:mr-2.5">
+
+          {/* Main content */}
+          <div className="p-6 pt-4">
             <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
               <div className="w-[64%] max-md:w-full max-md:ml-0">
-                <div className="w-full max-md:max-w-full max-md:mt-10">
+                <div className="w-full max-md:max-w-full">
                   <div className="flex w-[543px] max-w-full gap-[13px] text-white flex-wrap">
                     <img
                       src="https://api.builder.io/api/v1/image/assets/TEMP/575db4fcc3f27ace122a83abec07b8055dd416ea?placeholderIfAbsent=true"
@@ -43,7 +71,7 @@ export const BrandHero: React.FC = () => {
                     <div className="flex flex-col items-stretch font-semibold">
                       <div className="flex items-center gap-1.5 text-[28px] text-center tracking-[-0.56px] leading-none">
                         <h1 className="self-stretch my-auto">
-                          MAJORITY - Mobile Banking 
+                          MAJORITY - Mobile Banking
                         </h1>
                         <img
                           src="https://api.builder.io/api/v1/image/assets/TEMP/922eed6815d223177e6c8c417b5ec653eed97f12?placeholderIfAbsent=true"
@@ -149,6 +177,9 @@ export const BrandHero: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Spacer after gradient */}
+      <div className="h-16" />
     </section>
   );
 };

@@ -34,7 +34,7 @@ const Index = () => {
   }));
 
   return (
-    <div className="bg-white flex flex-col overflow-hidden items-center pb-[184px] rounded-[32px] max-md:pb-[100px]">
+    <div className="bg-white flex flex-col overflow-hidden items-center pb-24 rounded-[32px]">
       <Header />
 
       <main className="w-full max-w-[1357px] px-4">
