@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CompanyVerification } from '@/types';
 import { createCompanyVerification } from '@/services/companyVerificationService';
 import { useAuth } from '@/hooks/useAuth';
+import citiesData from '@/constants/cities.json';
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -54,7 +55,31 @@ const CompanySignup = () => {
         if (!acceptedTerms) return;
         if (currentStep < 4) {
             setCurrentStep((currentStep + 1) as Step);
-            setAcceptedTerms(false);
+            // Keep acceptedTerms checked across steps
+        }
+    };
+
+    const handlePreviousStep = () => {
+        if (currentStep > 1) {
+            setCurrentStep((currentStep - 1) as Step);
+        }
+    };
+
+    // Get available districts based on selected city
+    const availableDistricts = useMemo(() => {
+        if (!formData.city) return [];
+        return citiesData.districts[formData.city as keyof typeof citiesData.districts] || [];
+    }, [formData.city]);
+
+    // Reset district when city changes
+    const handleCityChange = (city: string) => {
+        updateFormData('city', city);
+        // Clear district if it's not valid for the new city
+        if (formData.district) {
+            const newDistricts = citiesData.districts[city as keyof typeof citiesData.districts] || [];
+            if (!newDistricts.includes(formData.district)) {
+                updateFormData('district', '');
+            }
         }
     };
 
@@ -204,7 +229,11 @@ const CompanySignup = () => {
                                 <input
                                     type="tel"
                                     value={formData.requesterPhoneNumber}
-                                    onChange={(e) => updateFormData('requesterPhoneNumber', e.target.value)}
+                                    onChange={(e) => {
+                                        // Only allow numbers, spaces, parentheses, hyphens, and plus sign
+                                        const value = e.target.value.replace(/[^\d\s\-\+\(\)]/g, '');
+                                        updateFormData('requesterPhoneNumber', value);
+                                    }}
                                     placeholder="Başvuru Yapanın Telefon Numarası"
                                     className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
                                     style={{ fontFamily: 'Manrope, sans-serif' }}
@@ -222,7 +251,7 @@ const CompanySignup = () => {
                                 />
                             </div>
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-4">
                                 <label className="flex items-start gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -235,14 +264,16 @@ const CompanySignup = () => {
                                     </span>
                                 </label>
 
-                                <button
-                                    onClick={handleNextStep}
-                                    disabled={!acceptedTerms || !formData.requesterName || !formData.requesterCompanyEmail}
-                                    className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{ fontFamily: 'Metropolis, sans-serif' }}
-                                >
-                                    Marka Doğrulamasını Başlat
-                                </button>
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={handleNextStep}
+                                        disabled={!acceptedTerms || !formData.requesterName || !formData.requesterCompanyEmail}
+                                        className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={{ fontFamily: 'Metropolis, sans-serif' }}
+                                    >
+                                        Marka Doğrulamasını Başlat
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -278,10 +309,16 @@ const CompanySignup = () => {
                                         type="password"
                                         value={panelPassword}
                                         onChange={(e) => setPanelPassword(e.target.value)}
-                                        placeholder="Panel Giriş Şifre"
+                                        placeholder="Panel Giriş Şifre (En az 6 karakter)"
                                         className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
                                         style={{ fontFamily: 'Manrope, sans-serif' }}
+                                        minLength={6}
                                     />
+                                    {panelPassword && panelPassword.length < 6 && (
+                                        <p className="text-red-500 text-xs mt-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                            Şifre en az 6 karakter olmalıdır
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -296,7 +333,7 @@ const CompanySignup = () => {
                                 />
                             </div>
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-4">
                                 <label className="flex items-start gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -309,14 +346,23 @@ const CompanySignup = () => {
                                     </span>
                                 </label>
 
-                                <button
-                                    onClick={handleNextStep}
-                                    disabled={!acceptedTerms || !formData.panelUserName || !panelPassword}
-                                    className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    style={{ fontFamily: 'Metropolis, sans-serif' }}
-                                >
-                                    İleri
-                                </button>
+                                <div className="flex justify-between">
+                                    <button
+                                        onClick={handlePreviousStep}
+                                        className="px-8 py-3 rounded-lg border border-gray-300 text-gray-700 font-semibold transition-all hover:bg-gray-50"
+                                        style={{ fontFamily: 'Metropolis, sans-serif' }}
+                                    >
+                                        Geri
+                                    </button>
+                                    <button
+                                        onClick={handleNextStep}
+                                        disabled={!acceptedTerms || !formData.panelUserName || !panelPassword || panelPassword.length < 6}
+                                        className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        style={{ fontFamily: 'Metropolis, sans-serif' }}
+                                    >
+                                        İleri
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -368,24 +414,38 @@ const CompanySignup = () => {
                                     />
 
                                     <div className="grid grid-cols-3 gap-4">
-                                        <input
-                                            type="text"
+                                        <select
                                             value={formData.city}
-                                            onChange={(e) => updateFormData('city', e.target.value)}
-                                            placeholder="Şehir"
+                                            onChange={(e) => handleCityChange(e.target.value)}
                                             className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
-                                            style={{ fontFamily: 'Manrope, sans-serif' }}
-                                        />
+                                            style={{ 
+                                                fontFamily: 'Manrope, sans-serif',
+                                                color: formData.city ? '#202023' : '#9CA3AF'
+                                            }}
+                                        >
+                                            <option value="">Şehir Seçiniz</option>
+                                            {citiesData.cities.map((city) => (
+                                                <option key={city} value={city}>
+                                                    {city}
+                                                </option>
+                                            ))}
+                                        </select>
                                         <select
                                             value={formData.district}
                                             onChange={(e) => updateFormData('district', e.target.value)}
-                                            className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors text-gray-500"
-                                            style={{ fontFamily: 'Manrope, sans-serif' }}
+                                            disabled={!formData.city}
+                                            className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                            style={{ 
+                                                fontFamily: 'Manrope, sans-serif',
+                                                color: formData.district ? '#202023' : '#9CA3AF'
+                                            }}
                                         >
-                                            <option value="">İlçe</option>
-                                            <option value="Çekmeköy">Çekmeköy</option>
-                                            <option value="Kadıköy">Kadıköy</option>
-                                            <option value="Beşiktaş">Beşiktaş</option>
+                                            <option value="">İlçe Seçiniz</option>
+                                            {availableDistricts.map((district) => (
+                                                <option key={district} value={district}>
+                                                    {district}
+                                                </option>
+                                            ))}
                                         </select>
                                         <input
                                             type="text"
@@ -427,17 +487,27 @@ const CompanySignup = () => {
                                     )}
                                 </div>
 
-                                <label className="flex items-start gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={acceptedTerms}
-                                        onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                        className="mt-1 w-4 h-4 rounded border-gray-300 text-[#2EC4B6] focus:ring-[#2EC4B6]"
-                                    />
-                                    <span className="text-sm text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                        Vermiş olduğum bilgilerin doğruluğunu onaylıyorum. Aksi taktirde ilgili markanın doğrulamasını yapamayacağımı biliyorum.
-                                    </span>
-                                </label>
+                                <div className="flex flex-col gap-4">
+                                    <label className="flex items-start gap-2 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={acceptedTerms}
+                                            onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                            className="mt-1 w-4 h-4 rounded border-gray-300 text-[#2EC4B6] focus:ring-[#2EC4B6]"
+                                        />
+                                        <span className="text-sm text-gray-600" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                            Vermiş olduğum bilgilerin doğruluğunu onaylıyorum. Aksi taktirde ilgili markanın doğrulamasını yapamayacağımı biliyorum.
+                                        </span>
+                                    </label>
+
+                                    <button
+                                        onClick={handlePreviousStep}
+                                        className="w-full px-8 py-3 rounded-lg border border-gray-300 text-gray-700 font-semibold transition-all hover:bg-gray-50"
+                                        style={{ fontFamily: 'Metropolis, sans-serif' }}
+                                    >
+                                        Geri
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Package Selection */}

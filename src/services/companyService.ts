@@ -271,6 +271,32 @@ export const createCompanyFromVerification = async (
 };
 
 /**
+ * Fetches multiple companies by their IDs
+ */
+export const fetchCompaniesByIds = async (companyIds: string[]): Promise<Company[]> => {
+    try {
+        if (companyIds.length === 0) {
+            return [];
+        }
+
+        const companies: Company[] = [];
+        
+        // Fetch each company individually
+        for (const companyId of companyIds) {
+            const company = await fetchCompany(companyId);
+            if (company) {
+                companies.push(company);
+            }
+        }
+
+        return companies;
+    } catch (error) {
+        console.error('Error fetching companies by IDs:', error);
+        throw error;
+    }
+};
+
+/**
  * Creates a default company object
  */
 export const createDefaultCompany = (

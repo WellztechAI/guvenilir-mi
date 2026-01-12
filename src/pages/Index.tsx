@@ -1,357 +1,559 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { BrandHero } from '@/components/BrandHero';
-import { ReviewCard } from '@/components/ReviewCard';
-import { ReviewFilters } from '@/components/ReviewFilters';
-import { Pagination } from '@/components/Pagination';
 import { Footer } from '@/components/Footer';
+import { Search, Car, Sparkles, Monitor, Shirt, ShoppingCart, Building2, MoreHorizontal } from 'lucide-react';
+import { searchCompaniesByName } from '@/services/companyService';
+import { Company as CompanyType } from '@/types';
+
+// Category data with icons
+const categories = [
+  { id: 'otomotiv', label: 'Otomotiv', icon: Car },
+  { id: 'guzellik', label: 'Güzellik & Kişisel Bakım', icon: Sparkles },
+  { id: 'elektronik', label: 'Elektronik', icon: Monitor },
+  { id: 'moda', label: 'Moda', icon: Shirt },
+  { id: 'market', label: 'Market', icon: ShoppingCart },
+  { id: 'banka', label: 'Banka', icon: Building2 },
+];
+
+// Sample company data
+const featuredCompanies = [
+  { name: 'Garanti BBVA', category: 'Banka' },
+  { name: 'Nike', category: 'Giyim' },
+  { name: 'Hoagard', category: 'Ev Tekstil' },
+  { name: 'English Home', category: 'Ev Tekstili' },
+];
+
+const mostReviewedCompanies = [
+  { name: 'Fuzul Ev', category: 'Finansman' },
+  { name: 'Vestel', category: 'Elektronik' },
+  { name: 'Turkcell', category: 'Telekomünikasyon' },
+  { name: 'Trendyol', category: 'E-Ticaret' },
+];
+
+const newReviews = [
+  { name: 'MediaMarkt', category: 'Elektronik' },
+  { name: 'LC Waikiki', category: 'Moda' },
+  { name: 'Migros', category: 'Market' },
+  { name: 'Akbank', category: 'Banka' },
+];
 
 const Index = () => {
-  const sampleReviews = [
-    {
-      author: "Fuat Han Albar",
-      date: "5 Ekim 2025",
-      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam eget cursus justo. Maecenas vehicula eu felis ac congue. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam eget cursus justo. Maecenas vehicula eu felis ac congue.",
-      helpful: 10,
-      avatar: "https://api.builder.io/api/v1/image/assets/TEMP/ed4d506d869550e63301cda115d2a37f3f3d8102?placeholderIfAbsent=true"
-    },
-    {
-      author: "Fuat Han Albar",
-      date: "5 Ekim 2025",
-      content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam eget cursus justo. Maecenas vehicula eu felis ac congue. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam eget cursus justo. Maecenas vehicula eu felis ac congue.",
-      helpful: 10,
-      avatar: "https://api.builder.io/api/v1/image/assets/TEMP/a0f8758db9ca5ef168eb5a6438000c9ed8b08414?placeholderIfAbsent=true"
-    }
-  ];
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CompanyType[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
-  const allReviews = Array(6).fill(null).map(() => ({
-    author: "Fuat Han Albar",
-    date: "Bir gün önce",
-    location: "İstanbul • 3 yorum",
-    content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam eget cursus justo. Maecenas vehicula eu felis ac congue. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo, blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl consequat tincidunt.",
-    helpful: 10,
-    avatar: "https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
-  }));
+  // Debounced search effect
+  useEffect(() => {
+    const searchCompanies = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSearchResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await searchCompaniesByName(searchQuery);
+        setSearchResults(results.slice(0, 5)); // Limit to 5 results
+        setShowDropdown(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchCompanies, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleCategoryClick = (categoryLabel: string) => {
+    setSearchQuery(categoryLabel);
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      setShowDropdown(false);
+      // Navigate to search results or first result
+      if (searchResults.length > 0) {
+        navigate(`/company/${searchResults[0].id}`);
+      }
+    }
+  };
+
+  const handleSelectCompany = (company: CompanyType) => {
+    setShowDropdown(false);
+    setSearchQuery(company.name);
+    navigate(`/company/${company.id}`);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   return (
-    <div className="bg-white flex flex-col overflow-hidden items-center pb-24 rounded-[32px]">
+    <div className="min-h-screen bg-white flex flex-col">
       <Header />
 
-      <main className="w-full max-w-[1357px] px-4">
-        <BrandHero />
+      {/* Hero Section with Purple to White Vertical Gradient */}
+      <section className="relative w-full pt-12 pb-96 overflow-visible">
+        {/* Background with vertical purple to white gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#2d1b4e] via-[#4a3a6e] to-white" />
 
-        {/* User Review Section */}
-        <section className="mt-9">
-          <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-none tracking-[-0.56px] text-center max-md:max-w-full">
-            Marka Hakkında Yazdığınız Yorum
-          </h2>
-          <div className="bg-[rgba(253,253,253,1)] shadow-[0px_6px_10px_rgba(177,177,177,0.08)] border border flex flex-col items-stretch text-xs font-medium mr-[43px] mt-[5px] py-[23px] rounded-[26px] border-solid max-md:max-w-full max-md:mr-2.5">
-            <div className="flex w-full flex-col text-[#6B6B6E] px-[30px] max-md:max-w-full max-md:px-5">
-              <div className="flex items-stretch gap-[5px] text-xl text-[#202023] font-semibold text-center leading-[1.4]">
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/ed4d506d869550e63301cda115d2a37f3f3d8102?placeholderIfAbsent=true"
-                  alt="User avatar"
-                  className="aspect-[1] object-contain w-[41px] shrink-0 rounded-[50%]"
-                />
-                <div className="text-[#202023] basis-auto">
-                  Fuat Han Albar
-                </div>
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                  alt="Verified"
-                  className="aspect-[0.85] object-contain w-[11px] shrink-0 my-auto"
-                />
-              </div>
-              <div className="text-[#6B6B6E] mt-[11px]">
-                5 Ekim 2025
-              </div>
-              <p className="text-[rgba(65,65,65,1)] font-normal leading-[18px] tracking-[-0.48px] self-stretch mt-[39px] max-md:max-w-full">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                Praesent nibh justo, blandit eu consectetur sit amet, iaculis in
-                velit. Praesent nec nisi eu nisl consequat tincidunt. Aliquam
-                laoreet ex elit, eu eleifend dui maximus in. Mauris ut quam vel
-                neque gravida faucibus. Etiam eget cursus justo. Maecenas
-                vehicula eu felis ac congue. Lorem ipsum dolor sit amet,
-                consectetur adipiscing elit. Praesent nibh justo, blandit eu
-                consectetur sit amet, iaculis in velit. Praesent nec nisi eu
-                nisl consequat tincidunt. Aliquam laoreet ex elit, eu eleifend
-                dui maximus in. Mauris ut quam vel neque gravida faucibus. Etiam
-                eget cursus justo. Maecenas vehicula eu felis ac congue.
-              </p>
-              <div className="flex items-stretch gap-2.5 text-[9px] mt-[29px]">
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/95979003369fcb4fbb57385270dd0c9f990d82c8?placeholderIfAbsent=true"
-                  alt="Helpful"
-                  className="aspect-[1] object-contain w-[26px] shadow-[0px_0px_0px_1px_rgba(0,0,0,0.36)] shrink-0 rounded-[60px]"
-                />
-                <div className="text-[#6B6B6E] my-auto">
-                  Yararlı <span className="font-semibold">10</span>
-                </div>
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/188d2125fbabc22270598057a31a444131378ac8?placeholderIfAbsent=true"
-                  alt="Share"
-                  className="aspect-[1] object-contain w-[26px] shadow-[0px_0px_0px_1px_rgba(0,0,0,0.36)] shrink-0 rounded-[60px]"
-                />
-                <div className="text-[#6B6B6E] my-auto">
-                  Paylaş
-                </div>
-              </div>
-            </div>
-            <button className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 text-black text-center tracking-[-0.48px] leading-loose justify-center mr-9 px-2.5 py-1 rounded-md max-md:mr-2.5 hover:bg-[rgba(0,0,0,0.08)] transition-colors self-end">
-              <span className="self-stretch my-auto">
-                Tamamını Gör
-              </span>
-            </button>
-          </div>
-        </section>
+        <div className="relative z-10 w-full max-w-[1200px] mx-auto px-4">
+          {/* Semi-transparent wrapper for hero content - positioned relative for absolute children */}
+          <div className="relative bg-white/15 backdrop-blur-sm rounded-3xl p-8 md:p-12 pb-20">
+            {/* Title */}
+            <h1 className="text-white text-4xl md:text-5xl font-bold text-center mb-3 tracking-tight">
+              Marka Güven Endeksi
+            </h1>
 
-        {/* Featured Reviews Section */}
-        <section className="mt-[30px]">
-          <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-none tracking-[-0.56px] text-center ml-[15px] max-md:ml-2.5">
-            Öne Çıkan Yorumlar
-          </h2>
-          <div className="mr-[43px] mt-[30px] max-md:max-w-full max-md:mr-2.5">
-            <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-              {sampleReviews.map((review, index) => (
-                <div key={index} className="w-6/12 max-md:w-full max-md:ml-0">
-                  <ReviewCard {...review} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+            {/* Subtitle */}
+            <p className="text-white/90 text-lg md:text-xl text-center mb-8 max-w-xl mx-auto leading-relaxed">
+              Gerçek müşteri deneyimleriyle markaların güvenilirliğini keşfet!
+            </p>
 
-        {/* All Reviews Section */}
-        <section className="mr-[43px] mt-[30px] max-md:max-w-full max-md:mr-2.5">
-          <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-            <div className="w-[71%] max-md:w-full max-md:ml-0">
-              <div className="w-full max-md:max-w-full max-md:mt-8">
-                <div className="max-md:max-w-full max-md:mr-2.5">
-                  <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-                    <div className="w-6/12 max-md:w-full max-md:ml-0">
-                      <ReviewFilters />
-                    </div>
-                    <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
-                      <div className="w-full mt-[50px] max-md:max-w-full max-md:mt-10">
-                        <div className="flex w-full flex-col items-stretch text-xs text-black font-medium text-center tracking-[-0.48px] leading-loose pl-11 pr-[5px] max-md:max-w-full max-md:pl-5">
-                          <div>Öne Çıkan Konular</div>
-                          <div className="flex w-full items-stretch gap-0.5 mt-[7px] flex-wrap">
-                            {['hizmet', 'kredi kartı', 'dolandırıcılık', 'öneri', 'teşekkür', 'şikayet'].map((topic) => (
-                              <button
-                                key={topic}
-                                className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md hover:bg-[rgba(0,0,0,0.08)] transition-colors"
-                              >
-                                <span className="self-stretch my-auto">
-                                  {topic}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex w-full items-stretch gap-5 text-sm font-normal leading-none justify-between mt-[62px] max-md:max-w-full max-md:mt-10">
-                          <button className="justify-center items-center border flex gap-2 overflow-hidden text-[#99B2C6] whitespace-nowrap bg-[#F1F5F7] px-4 py-2.5 rounded-[0_8px_8px_0] border-solid border-[#D9E1E7] hover:bg-white hover:text-[#17181A] transition-colors">
-                            <span className="text-[#99B2C6] self-stretch my-auto">
-                              5-Harika
-                            </span>
-                          </button>
-                          <div className="flex gap-[-1px] rounded-lg">
-                            <button className="justify-center items-center border flex gap-2 overflow-hidden text-[#17181A] w-[100px] bg-white px-4 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] hover:bg-gray-50 transition-colors">
-                              <span className="text-[#17181A] self-stretch my-auto">
-                                En Eski
-                              </span>
-                            </button>
-                            <button className="justify-center items-center border flex gap-2 overflow-hidden text-[#99B2C6] w-[100px] bg-[#F1F5F7] px-4 py-2.5 border-solid border-[#D9E1E7] hover:bg-white hover:text-[#17181A] transition-colors">
-                              <span className="text-[#99B2C6] self-stretch my-auto">
-                                En Yeni
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+            {/* Search Container */}
+            <div className="max-w-3xl mx-auto mb-16">
+              {/* Search Bar */}
+              <div className="flex items-center gap-3 mb-6" ref={searchRef}>
+                <div className="flex-1 relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Search size={20} />
                   </div>
-                </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                    placeholder="Arçelik Güvenilir Mi?"
+                    className="w-full h-14 pl-12 pr-4 rounded-xl bg-white/95 backdrop-blur-sm text-gray-800 placeholder-gray-400 text-lg focus:outline-none focus:ring-2 focus:ring-purple-400 shadow-lg transition-all"
+                  />
 
-                {/* Reviews List */}
-                <div className="mt-[58px] max-md:max-w-full max-md:mt-10">
-                  <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-                    <div className="w-6/12 max-md:w-full max-md:ml-0">
-                      <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
-                        {allReviews.slice(0, 3).map((review, index) => (
-                          <article key={index} className="w-full">
-                            <div className="flex w-full items-stretch gap-[40px_65px]">
-                              <div className="flex items-stretch gap-[13px] grow shrink basis-auto">
-                                <img
-                                  src={review.avatar}
-                                  alt={`${review.author} avatar`}
-                                  className="aspect-[1] object-contain w-[52px] shrink-0 my-auto rounded-[50%]"
-                                />
-                                <div className="flex flex-col items-stretch">
-                                  <div className="flex items-stretch gap-[7px] text-[26px] text-[#202023] font-semibold text-center leading-[1.4]">
-                                    <div className="text-[#202023] grow">
-                                      {review.author}
-                                    </div>
-                                    <img
-                                      src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                                      alt="Verified"
-                                      className="aspect-[0.85] object-contain w-[11px] shrink-0 mt-3.5"
-                                    />
-                                  </div>
-                                  <div className="text-[#6B6B6E] text-base font-medium mt-2">
-                                    {review.location}
-                                  </div>
-                                </div>
+                  {/* Search Dropdown */}
+                  {showDropdown && (
+                    <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
+                      {isSearching ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <span className="animate-pulse">Aranıyor...</span>
+                        </div>
+                      ) : searchResults.length > 0 ? (
+                        <div className="divide-y divide-gray-50">
+                          {searchResults.map((company) => (
+                            <button
+                              key={company.id}
+                              onClick={() => handleSelectCompany(company)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                            >
+                              {/* Company Logo */}
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center shrink-0">
+                                <span className="text-purple-600 text-sm font-semibold">
+                                  {company.name.substring(0, 2).toUpperCase()}
+                                </span>
                               </div>
-                              <div className="text-[#6B6B6E] text-[13px] font-medium my-auto">
-                                {review.date}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-gray-800 font-medium truncate">{company.name}</p>
+                                <p className="text-gray-400 text-sm truncate">
+                                  {company.sectors?.join(', ') || 'Genel'}
+                                </p>
                               </div>
-                            </div>
-                            <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mt-10">
-                              {review.content}
-                            </p>
-                            <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium justify-between mt-2 max-md:mr-[5px]">
-                              <div className="flex gap-[31px]">
-                                <button className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity">
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/TEMP/07dc1f4467d8862ae84366171051235f3f317d39?placeholderIfAbsent=true"
-                                    alt="Helpful"
-                                    className="aspect-[1] object-contain w-3.5 shrink-0"
-                                  />
-                                  <span className="text-[#6B6B6E]">
-                                    Yararlı <span className="font-semibold">{review.helpful}</span>
-                                  </span>
-                                </button>
-                                <button className="flex items-stretch gap-[7px] whitespace-nowrap hover:opacity-70 transition-opacity">
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/TEMP/a79bac48bbf0a5e04f1ea45591c2195ef4e1848f?placeholderIfAbsent=true"
-                                    alt="Share"
-                                    className="aspect-[1] object-contain w-3.5 shrink-0"
-                                  />
-                                  <span className="text-[#6B6B6E]">
-                                    Paylaş
-                                  </span>
-                                </button>
+                              <div className="flex items-center gap-1 text-yellow-500">
+                                <span className="text-sm">★</span>
+                                <span className="text-gray-600 text-sm">{company.rating?.toFixed(1) || '-'}</span>
                               </div>
-                              <img
-                                src="https://api.builder.io/api/v1/image/assets/TEMP/2782f7a3b0e38be65d6c730a414fb34102b806d9?placeholderIfAbsent=true"
-                                alt="More options"
-                                className="aspect-[0.75] object-contain w-3 shrink-0"
-                              />
-                            </div>
-                            {index < 2 && (
-                              <hr className="w-full mt-[31px] border-t border-gray-200" />
-                            )}
-                          </article>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
-                      <div className="w-full">
-                        <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
-                          {allReviews.slice(3, 6).map((review, index) => (
-                            <article key={index} className="w-full">
-                              <div className="flex w-full items-stretch gap-[40px_70px]">
-                                <div className="flex items-stretch gap-[13px] grow shrink basis-auto">
-                                  <img
-                                    src={review.avatar}
-                                    alt={`${review.author} avatar`}
-                                    className="aspect-[1] object-contain w-[52px] shrink-0 my-auto rounded-[50%]"
-                                  />
-                                  <div className="flex flex-col items-stretch">
-                                    <div className="flex items-stretch gap-[7px] text-[26px] text-[#202023] font-semibold text-center leading-[1.4]">
-                                      <div className="text-[#202023] grow">
-                                        {review.author}
-                                      </div>
-                                      <img
-                                        src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                                        alt="Verified"
-                                        className="aspect-[0.85] object-contain w-[11px] shrink-0 mt-3.5"
-                                      />
-                                    </div>
-                                    <div className="text-[#6B6B6E] text-base font-medium mt-2">
-                                      {review.location}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-[#6B6B6E] text-[13px] font-medium my-auto">
-                                  {review.date}
-                                </div>
-                              </div>
-                              <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mr-[5px] max-md:mt-10">
-                                {review.content}
-                              </p>
-                              <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium justify-between mt-2 max-md:mr-[5px]">
-                                <div className="flex gap-[31px]">
-                                  <button className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity">
-                                    <img
-                                      src="https://api.builder.io/api/v1/image/assets/TEMP/36604c57b9a3d63686bccbb1e83e92e6ea560faf?placeholderIfAbsent=true"
-                                      alt="Helpful"
-                                      className="aspect-[1] object-contain w-3.5 shrink-0"
-                                    />
-                                    <span className="text-[#6B6B6E]">
-                                      Yararlı <span className="font-semibold">{review.helpful}</span>
-                                    </span>
-                                  </button>
-                                  <button className="flex items-stretch gap-[7px] whitespace-nowrap hover:opacity-70 transition-opacity">
-                                    <img
-                                      src="https://api.builder.io/api/v1/image/assets/TEMP/9a6a3537a6621d8c71eae8ea5e8d58615936b07a?placeholderIfAbsent=true"
-                                      alt="Share"
-                                      className="aspect-[1] object-contain w-3.5 shrink-0"
-                                    />
-                                    <span className="text-[#6B6B6E]">
-                                      Paylaş
-                                    </span>
-                                  </button>
-                                </div>
-                                <img
-                                  src="https://api.builder.io/api/v1/image/assets/TEMP/2782f7a3b0e38be65d6c730a414fb34102b806d9?placeholderIfAbsent=true"
-                                  alt="More options"
-                                  className="aspect-[0.75] object-contain w-3 shrink-0"
-                                />
-                              </div>
-                              {index < 2 && (
-                                <hr className="w-full mt-[31px] border-t border-gray-200" />
-                              )}
-                            </article>
+                            </button>
                           ))}
                         </div>
-                      </div>
+                      ) : searchQuery.length >= 2 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          "{searchQuery}" için sonuç bulunamadı
+                        </div>
+                      ) : null}
                     </div>
+                  )}
+                </div>
+                <button
+                  onClick={handleSearch}
+                  className="h-14 px-8 bg-[#1a1a2e] hover:bg-[#2d2d4a] text-white font-semibold rounded-xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                >
+                  <Search size={20} />
+                  <span>Ara</span>
+                </button>
+              </div>
+
+              {/* Category Chips */}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {categories.map((category) => {
+                  const IconComponent = category.icon;
+                  return (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategoryClick(category.label)}
+                      className="flex items-center gap-2 px-4 py-2 bg-white/90 hover:bg-white backdrop-blur-sm text-gray-700 rounded-full border border-gray-200 transition-all hover:shadow-md"
+                    >
+                      <IconComponent size={16} className="text-gray-500" />
+                      <span className="text-sm font-medium">{category.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Company Containers - Absolutely positioned below chips with spacing */}
+            <div className="absolute left-0 right-0 top-full -mt-32 px-8 md:px-12 z-30">
+              {/* Section Header */}
+              <p className="text-gray-500 text-sm mb-4 ml-1">Seçilmiş önerileri keşfedin</p>
+
+              {/* Three Company Containers */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Featured Companies */}
+                <CompanyContainer
+                  title="Öne Çıkan Markalar"
+                  companies={featuredCompanies}
+                />
+
+                {/* Most Reviewed Companies */}
+                <CompanyContainer
+                  title="En Çok Yorum Alan Markalar"
+                  companies={mostReviewedCompanies}
+                />
+
+                {/* New Reviews */}
+                <CompanyContainer
+                  title="Yeni Eklenen Yorumlar"
+                  companies={newReviews}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* Promotional Section */}
+      <section className="w-full max-w-[1200px] mx-auto px-4 py-16">
+        {/* Main Tagline */}
+        <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-4 leading-tight">
+          Senin sesin,<br />
+          milyonların pusulası
+        </h2>
+
+        {/* Subtitle */}
+        <p className="text-gray-600 text-lg text-center max-w-2xl mx-auto mb-12">
+          Bir yorum, binlerce kararı değiştirebilir. Sen de güvenilir mi?'ye katkı sağla.
+        </p>
+
+        {/* Sample Review Card */}
+        <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Company Logo Side */}
+            <div className="flex flex-col items-center md:items-start gap-4">
+              <div className="text-2xl font-bold text-teal-600">
+                »»fuzul<span className="text-gray-800">EV</span>
+              </div>
+              <p className="text-xs text-gray-400">KOLAY KONUT EDİNDİRME MERKEZİ</p>
+            </div>
+
+            {/* Rating Side */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-lg font-semibold text-gray-700">☑ güvenilir mi?</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-8 h-8 bg-teal-500 rounded flex items-center justify-center">
+                      <span className="text-white text-lg">✓</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-gray-500">Toplam 15 yorum üzerinden 4.7 / 5 değerlendirme</p>
+            </div>
+          </div>
+
+          {/* Sample Review */}
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden shrink-0">
+                <img
+                  src="https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
+                  alt="User"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-gray-800">Fuat Han Albar</span>
+                  <span className="text-teal-500">✓</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                  <span className="text-yellow-500">🏅</span>
+                  <span>Güven Elçisi</span>
+                  <span>•</span>
+                  <span>3 yorum</span>
+                </div>
+                <div className="flex gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="w-5 h-5 bg-teal-500 rounded-sm flex items-center justify-center">
+                      <span className="text-white text-xs">✓</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo,
+                  blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl
+                  consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in.
+                  Mauris ut quam vel neque gravida faucibus.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Carousel Dots */}
+          <div className="flex justify-center gap-2 mt-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className={`w-2.5 h-2.5 rounded-full ${i === 1 ? 'bg-gray-800' : 'bg-gray-300'}`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Horizontal Slider Widget - Featured Brands */}
+      <section className="w-full max-w-[1200px] mx-auto px-4 py-16">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">Öne Çıkan Markalar</h2>
+            <p className="text-gray-500 text-sm">Yüksek güven skoru ile öne çıkan markalar</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors">
+              <span className="text-xl">←</span>
+            </button>
+            <button className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition-colors">
+              <span className="text-xl">→</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal scrolling container */}
+        <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide">
+          {/* Repeating company cards */}
+          {[1, 2, 3, 4].map((index) => (
+            <div key={index} className="flex-shrink-0 w-72 bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover:shadow-xl transition-shadow">
+              {/* Company Logo */}
+              <div className="text-2xl font-bold text-teal-600 mb-4">
+                »»fuzul<span className="text-gray-800">EV</span>
+              </div>
+
+              {/* Company Name */}
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Fuzul Ev</h3>
+
+              {/* Star Rating */}
+              <div className="flex gap-1 mb-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="w-7 h-7 bg-yellow-400 rounded flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">★</span>
                   </div>
+                ))}
+                <div className="w-7 h-7 bg-gray-300 rounded flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">★</span>
+                </div>
+              </div>
+
+              {/* Rating Info */}
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-semibold text-gray-800">4.5</span>
+                <span className="text-sm text-gray-500">(128 Yorum)</span>
+              </div>
+
+              {/* Avatar */}
+              <div className="mt-4">
+                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+                  <img
+                    src="https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
+                    alt="User"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               </div>
             </div>
-            <div className="w-[29%] ml-5 max-md:w-full max-md:ml-0">
-              <aside className="flex w-full flex-col items-stretch text-xs text-[rgba(36,36,36,1)] font-normal text-center tracking-[-0.48px] leading-loose mt-7 max-md:mt-10">
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/4345cc82038152849a7492f7db5b151115b3552e?placeholderIfAbsent=true"
-                  alt="Advertisement"
-                  className="aspect-[1.57] object-contain w-full max-md:mr-[5px]"
-                />
-                <img
-                  src="https://api.builder.io/api/v1/image/assets/TEMP/ba5d1392e0927b72ae819d9309cbb985f62268d2?placeholderIfAbsent=true"
-                  alt="Advertisement"
-                  className="aspect-[2.49] object-contain w-full mt-[18px] max-md:ml-[3px]"
-                />
-                <div className="flex items-stretch gap-1 mt-[9px] max-md:mr-[5px]">
-                  <div className="grow">
-                    Güvenilirmi.com yorumları nasıl yayınlar?
+          ))}
+        </div>
+      </section>
+
+      {/* Horizontal Review Cards Carousel */}
+      <section className="w-full bg-gray-50 py-16">
+        <div className="max-w-[1200px] mx-auto px-4">
+          {/* Section Title */}
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
+              Milyonlarca tüketici,<br />
+              senin sayende en iyi kararı veriyor.
+            </h2>
+            <p className="text-gray-600 text-lg">Senin sesin, milyonların pusulası.</p>
+          </div>
+
+          {/* Horizontal scrolling review cards */}
+          <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide">
+            {[1, 2, 3, 4].map((index) => (
+              <div key={index} className="flex-shrink-0 w-80 bg-white rounded-2xl shadow-lg p-6">
+                {/* User Info Header */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
+                      alt="Fuat Han Albar"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  <img
-                    src="https://api.builder.io/api/v1/image/assets/TEMP/6bf5ccc4678e8e6600a938500d53c01b56ba819e?placeholderIfAbsent=true"
-                    alt="External link"
-                    className="aspect-[1] object-contain w-2 shrink-0 my-auto"
-                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800">Fuat Han Albar</span>
+                      <span className="text-yellow-500 text-sm">🏅</span>
+                    </div>
+                    <span className="text-xs text-gray-400">Güvenilir Elçisi • 3 yorum</span>
+                  </div>
                 </div>
-              </aside>
+
+                {/* Date and Stars */}
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-500">5 Ekim 2025</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="w-6 h-6 bg-yellow-400 rounded flex items-center justify-center">
+                        <span className="text-white text-xs">★</span>
+                      </div>
+                    ))}
+                    <div className="w-6 h-6 bg-gray-300 rounded flex items-center justify-center">
+                      <span className="text-white text-xs">★</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Review Text */}
+                <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent nibh justo,
+                  blandit eu consectetur sit amet, iaculis in velit. Praesent nec nisi eu nisl
+                  consequat tincidunt. Aliquam laoreet ex elit, eu eleifend dui maximus in.
+                </p>
+
+                {/* Avatar in review */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                    <img
+                      src="https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
+                      alt="Reviewer"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+
+                {/* Company Info */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">GB</span>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-800">Garanti BBVA</div>
+                      <div className="flex gap-0.5">
+                        {[1, 2, 3, 4].map((i) => (
+                          <span key={i} className="text-yellow-400 text-xs">★</span>
+                        ))}
+                        <span className="text-gray-300 text-xs">★</span>
+                      </div>
+                      <span className="text-xs text-gray-500">128 yorum</span>
+                    </div>
+                  </div>
+                  <button className="text-sm text-gray-500 hover:text-gray-700">Tamamını Gör</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="flex-1" />
+      <Footer />
+    </div>
+  );
+};
+
+// Company Container Component
+interface CompanyListItem {
+  name: string;
+  category: string;
+}
+
+interface CompanyContainerProps {
+  title: string;
+  companies: CompanyListItem[];
+}
+
+const CompanyContainer: React.FC<CompanyContainerProps> = ({ title, companies }) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <h3 className="text-gray-800 font-semibold text-base">{title}</h3>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+            <img
+              src="https://api.builder.io/api/v1/image/assets/TEMP/b871dbe9b37cc4da7ac5ba17eed916416d44f314?placeholderIfAbsent=true"
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+            <MoreHorizontal size={18} className="text-gray-500" />
+          </button>
+        </div>
+      </div>
+
+      {/* Company List */}
+      <div className="divide-y divide-gray-50">
+        {companies.map((company, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+          >
+            {/* Company Logo Placeholder */}
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shrink-0">
+              <span className="text-gray-400 text-xs font-semibold">
+                {company.name.substring(0, 2).toUpperCase()}
+              </span>
+            </div>
+
+            {/* Company Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-800 font-medium text-sm truncate">{company.name}</p>
+              <p className="text-gray-400 text-xs truncate">{company.category}</p>
             </div>
           </div>
-        </section>
-
-        <Pagination />
-      </main>
-
-      <Footer />
+        ))}
+      </div>
     </div>
   );
 };
