@@ -86,6 +86,37 @@ export const fetchCompanyVerificationsByCompanyId = async (companyId: string): P
 };
 
 /**
+ * Fetches a company verification by requester's company email
+ * Used to fetch company data for authenticated company users
+ */
+export const fetchCompanyVerificationByEmail = async (email: string): Promise<CompanyVerification | null> => {
+    try {
+        const q = query(
+            collection(db, COMPANY_VERIFICATION_COLLECTION),
+            where('requesterCompanyEmail', '==', email)
+        );
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            console.log('No company verification found for email:', email);
+            return null;
+        }
+
+        // Return the first matching document
+        const docSnap = querySnapshot.docs[0];
+        const data = docSnap.data() as CompanyVerificationFirestore;
+        return {
+            ...data,
+            id: docSnap.id,
+            createdAt: data.createdAt.toDate(),
+        };
+    } catch (error) {
+        console.error('Error fetching company verification by email:', error);
+        throw error;
+    }
+};
+
+/**
  * Updates a company verification status
  */
 export const updateCompanyVerificationStatus = async (

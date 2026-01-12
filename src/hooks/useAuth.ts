@@ -41,22 +41,30 @@ export const useAuth = () => {
 
     /**
      * Sign up with email and password
+     * userType: 'user' for normal users, 'company' for company accounts
+     * userName: The actual display name to store in Firestore
      */
     const register = async (
         email: string,
         password: string,
-        displayName?: string,
+        userType: 'user' | 'company' = 'user',
+        userName?: string,
         phoneNumber?: string
     ) => {
         setIsLoading(true);
         setError(null);
         try {
-            // Store phone number in Zustand for AuthProvider to use
-            useAuthStore.getState().setPendingPhoneNumber(phoneNumber || null);
-            await signUpWithEmail(email, password, displayName);
+            // Store pending data in Zustand for AuthProvider to use
+            const authStore = useAuthStore.getState();
+            authStore.setPendingPhoneNumber(phoneNumber || null);
+            authStore.setPendingUserName(userName || null);
+
+            await signUpWithEmail(email, password, userType);
             // AuthProvider will handle the rest via onAuthStateChanged
         } catch (err) {
-            useAuthStore.getState().setPendingPhoneNumber(null);
+            const authStore = useAuthStore.getState();
+            authStore.setPendingPhoneNumber(null);
+            authStore.setPendingUserName(null);
             const errorMessage = err instanceof Error ? err.message : 'Registration failed';
             setError(errorMessage);
             throw err;

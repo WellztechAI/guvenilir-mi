@@ -30,7 +30,7 @@ const Login = () => {
             return;
         }
         try {
-            await register(email, password, userName, phoneNumber);
+            await register(email, password, 'user', userName, phoneNumber);
             navigate('/');
         } catch {
             // Error is handled by useAuth

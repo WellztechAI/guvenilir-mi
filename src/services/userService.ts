@@ -31,14 +31,25 @@ export const fetchUser = async (uid: string): Promise<User | null> => {
 export const createUser = async (user: User): Promise<void> => {
     try {
         console.log('Attempting to create user in Firestore:', user.id);
+        console.log('Firestore db instance:', db);
+
+        if (!db) {
+            throw new Error('Firestore database instance is not initialized');
+        }
+
         const userRef = doc(db, USERS_COLLECTION, user.id);
+        console.log('User ref created for collection:', USERS_COLLECTION);
+
         const firestoreUser = userToFirestore(user);
-        console.log('User data to save:', firestoreUser);
+        console.log('User data to save:', JSON.stringify(firestoreUser, null, 2));
+
         await setDoc(userRef, firestoreUser);
         console.log('User created successfully in Firestore:', user.id);
     } catch (error) {
         console.error('Error creating user in Firestore:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
+        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
         throw error;
     }
 };
@@ -86,9 +97,6 @@ export const createDefaultUser = (
     };
 };
 
-/**
- * Fetches user or creates a new one if doesn't exist
- */
 export const fetchOrCreateUser = async (
     uid: string,
     email: string,
@@ -99,8 +107,39 @@ export const fetchOrCreateUser = async (
 
     if (!user) {
         // Create new user
+        console.log('User not found, creating new user:', uid);
         user = createDefaultUser(uid, email, displayName, phoneNumber);
         await createUser(user);
+    } else {
+        // User exists, check if we need to update any info to keep sync with Auth
+        const updates: Partial<User> = {};
+        let hasUpdates = false;
+
+        // Update email if changed
+        if (email && user.email !== email) {
+            updates.email = email;
+            hasUpdates = true;
+        }
+
+        // Update display name if changed and provided
+        // Note: Firestore field is 'userName', Auth field is 'displayName'
+        if (displayName && user.userName !== displayName) {
+            updates.userName = displayName;
+            hasUpdates = true;
+        }
+
+        // Update phone number if provided and different (or missing)
+        if (phoneNumber && user.phoneNumber !== phoneNumber) {
+            updates.phoneNumber = phoneNumber;
+            hasUpdates = true;
+        }
+
+        if (hasUpdates) {
+            console.log('Syncing user data from Auth/Store to Firestore:', updates);
+            await updateUser(uid, updates);
+            // Update local user object to return the most recent data
+            user = { ...user, ...updates };
+        }
     }
 
     return user;

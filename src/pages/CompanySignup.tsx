@@ -4,11 +4,14 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { CompanyVerification } from '@/types';
 import { createCompanyVerification } from '@/services/companyVerificationService';
+import { useAuth } from '@/hooks/useAuth';
 
 type Step = 1 | 2 | 3 | 4;
 
+
 const CompanySignup = () => {
     const navigate = useNavigate();
+    const { register } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +63,20 @@ const CompanySignup = () => {
         setError(null);
 
         try {
-            // Prepare data for Firestore
+            // Step 1: Create Firebase Auth user for the company
+            // Using requesterCompanyEmail as email, panelPassword as password
+            // userType 'company' is stored in displayName for O(1) type detection
+            console.log('Creating Firebase Auth user for company...');
+            await register(
+                formData.requesterCompanyEmail || '',
+                panelPassword,
+                'company',
+                formData.panelUserName,
+                formData.requesterPhoneNumber
+            );
+            console.log('Company user created in Firebase Auth');
+
+            // Step 2: Prepare and save company verification data to Firestore
             const verificationData = {
                 companyId: formData.companyId || `company_${Date.now()}`,
                 requesterName: formData.requesterName || '',
@@ -85,8 +101,9 @@ const CompanySignup = () => {
             setVerificationId(docId);
             setCurrentStep(4);
         } catch (err) {
-            console.error('Error submitting company verification:', err);
-            setError('Başvuru gönderilirken bir hata oluştu. Lütfen tekrar deneyin.');
+            console.error('Error during company signup:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Başvuru gönderilirken bir hata oluştu.';
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -181,6 +198,17 @@ const CompanySignup = () => {
                                         style={{ fontFamily: 'Manrope, sans-serif' }}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="mb-4">
+                                <input
+                                    type="tel"
+                                    value={formData.requesterPhoneNumber}
+                                    onChange={(e) => updateFormData('requesterPhoneNumber', e.target.value)}
+                                    placeholder="Başvuru Yapanın Telefon Numarası"
+                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
+                                    style={{ fontFamily: 'Manrope, sans-serif' }}
+                                />
                             </div>
 
                             <div className="mb-6">

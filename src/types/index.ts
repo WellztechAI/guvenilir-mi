@@ -137,10 +137,20 @@ export const userFromFirestore = (data: UserFirestore): User => ({
     createdAt: convertTimestampToDate(data.createdAt),
 });
 
-export const userToFirestore = (data: User): UserFirestore => ({
-    ...data,
-    createdAt: convertDateToTimestamp(data.createdAt),
-});
+// Helper to convert undefined values to null (Firestore doesn't accept undefined)
+const convertUndefinedToNull = <T extends Record<string, unknown>>(obj: T): T => {
+    return Object.fromEntries(
+        Object.entries(obj).map(([key, value]) => [key, value === undefined ? null : value])
+    ) as T;
+};
+
+export const userToFirestore = (data: User): UserFirestore => {
+    const firestoreData = {
+        ...data,
+        createdAt: convertDateToTimestamp(data.createdAt),
+    };
+    return convertUndefinedToNull(firestoreData);
+};
 
 export const notiFromFirestore = (data: NotiFirestore): Noti => ({
     ...data,

@@ -27,7 +27,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await register(email, password, userName);
+            await register(email, password, 'user', userName);
             onClose();
         } catch {
             // Error is handled by useAuth

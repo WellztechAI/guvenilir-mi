@@ -21,17 +21,18 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 
 /**
  * Sign up with email and password
+ * userType is stored in displayName for O(1) user type detection
  */
 export const signUpWithEmail = async (
     email: string,
     password: string,
-    displayName?: string
+    userType: 'user' | 'company' = 'user'
 ): Promise<FirebaseUser> => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-    // Update display name if provided
-    if (displayName && userCredential.user) {
-        await updateProfile(userCredential.user, { displayName });
+    // Store user type in displayName for quick O(1) access
+    if (userCredential.user) {
+        await updateProfile(userCredential.user, { displayName: userType });
     }
 
     return userCredential.user;
