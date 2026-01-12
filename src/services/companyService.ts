@@ -237,6 +237,40 @@ export const deleteCompany = async (companyId: string): Promise<void> => {
 };
 
 /**
+ * Creates a company from an approved verification
+ */
+export const createCompanyFromVerification = async (
+    verification: any,
+    updateVerificationWithCompanyId: (verificationId: string, companyId: string) => Promise<void>
+): Promise<string> => {
+    try {
+        console.log('Creating company from verification:', verification.id);
+        
+        const company: Omit<Company, 'id'> = {
+            name: verification.requesterName,
+            description: '',
+            rating: null, // null instead of 0
+            commentCount: 0,
+            phone: verification.requesterPhoneNumber || '',
+            sectors: [],
+            status: 'active',
+        };
+        
+        // Always create with auto-generated ID
+        const companyId = await createCompany(company);
+        console.log('Company created successfully:', companyId);
+        
+        // Save companyId to verification
+        await updateVerificationWithCompanyId(verification.id, companyId);
+        
+        return companyId;
+    } catch (error) {
+        console.error('Error creating company from verification:', error);
+        throw error;
+    }
+};
+
+/**
  * Fetches multiple companies by their IDs
  */
 export const fetchCompaniesByIds = async (companyIds: string[]): Promise<Company[]> => {
