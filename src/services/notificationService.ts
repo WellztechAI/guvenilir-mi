@@ -49,17 +49,49 @@ export const fetchNotification = async (userId: string, notificationId: string):
 
 /**
  * Fetches all notifications for a user
+ * First tries to fetch from top-level notifications collection where doc ID = userId
+ * Falls back to subcollection if not found
  */
 export const fetchNotificationsByUserId = async (userId: string): Promise<Noti[]> => {
     try {
+        console.log('Fetching notifications for user:', userId);
+        
+        // First, try to fetch from top-level notifications collection where document ID is the userId
+        try {
+            const notiDocRef = doc(db, NOTIFICATIONS_COLLECTION, userId);
+            const notiDocSnap = await getDoc(notiDocRef);
+            
+            if (notiDocSnap.exists()) {
+                console.log('Found notifications document at top level');
+                const data = notiDocSnap.data();
+                
+                // Check if the document contains an array of notifications or individual notification fields
+                if (data.notifications && Array.isArray(data.notifications)) {
+                    // If notifications are stored as an array in the document
+                    return data.notifications.map((noti: NotiFirestore, index: number) => 
+                        notiFromFirestore({ ...noti, id: noti.id || `${userId}_${index}` })
+                    );
+                } else {
+                    // If the document itself is a single notification
+                    return [notiFromFirestore({ ...data as NotiFirestore, id: notiDocSnap.id })];
+                }
+            }
+        } catch (topLevelError) {
+            console.log('No notifications found at top level, trying subcollection:', topLevelError);
+        }
+        
+        // Fallback: Try subcollection approach
         const notisRef = collection(db, 'users', userId, NOTIFICATIONS_COLLECTION);
         const q = query(notisRef, orderBy('date', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        return querySnapshot.docs.map(doc => {
+        const notifications = querySnapshot.docs.map(doc => {
             const data = doc.data() as Omit<NotiFirestore, 'id'>;
             return notiFromFirestore({ ...data, id: doc.id });
         });
+        
+        console.log('Found notifications in subcollection:', notifications.length);
+        return notifications;
     } catch (error) {
         console.error('Error fetching notifications:', error);
         throw error;

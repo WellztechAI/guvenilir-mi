@@ -49,17 +49,49 @@ export const fetchReward = async (userId: string, rewardId: string): Promise<Rew
 
 /**
  * Fetches all rewards for a user
+ * First tries to fetch from top-level rewards collection where doc ID = userId
+ * Falls back to subcollection if not found
  */
 export const fetchRewardsByUserId = async (userId: string): Promise<Reward[]> => {
     try {
+        console.log('Fetching rewards for user:', userId);
+        
+        // First, try to fetch from top-level rewards collection where document ID is the userId
+        try {
+            const rewardDocRef = doc(db, REWARDS_COLLECTION, userId);
+            const rewardDocSnap = await getDoc(rewardDocRef);
+            
+            if (rewardDocSnap.exists()) {
+                console.log('Found rewards document at top level');
+                const data = rewardDocSnap.data();
+                
+                // Check if the document contains an array of rewards or individual reward fields
+                if (data.rewards && Array.isArray(data.rewards)) {
+                    // If rewards are stored as an array in the document
+                    return data.rewards.map((reward: RewardFirestore, index: number) => 
+                        rewardFromFirestore({ ...reward, id: reward.id || `${userId}_${index}` })
+                    );
+                } else {
+                    // If the document itself is a single reward
+                    return [rewardFromFirestore({ ...data as RewardFirestore, id: rewardDocSnap.id })];
+                }
+            }
+        } catch (topLevelError) {
+            console.log('No rewards found at top level, trying subcollection:', topLevelError);
+        }
+        
+        // Fallback: Try subcollection approach
         const rewardsRef = collection(db, 'users', userId, REWARDS_COLLECTION);
         const q = query(rewardsRef, orderBy('date', 'desc'));
         const querySnapshot = await getDocs(q);
 
-        return querySnapshot.docs.map(doc => {
+        const rewards = querySnapshot.docs.map(doc => {
             const data = doc.data() as Omit<RewardFirestore, 'id'>;
             return rewardFromFirestore({ ...data, id: doc.id });
         });
+        
+        console.log('Found rewards in subcollection:', rewards.length);
+        return rewards;
     } catch (error) {
         console.error('Error fetching rewards:', error);
         throw error;

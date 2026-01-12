@@ -7,6 +7,9 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CompanySignup from "./pages/CompanySignup";
+import CompanyDetail from "./pages/CompanyDetail";
+import { UserProfile } from "./pages/UserProfile";
+import { CompanyProfile } from "./pages/CompanyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +25,9 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/company-signup" element={<CompanySignup />} />
+            <Route path="/company/:id" element={<CompanyDetail />} />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/company-profile" element={<CompanyProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

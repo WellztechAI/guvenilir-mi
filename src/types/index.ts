@@ -72,6 +72,8 @@ export interface Comment {
     answer?: string;
     answerDate?: Date;
     likesCount: number;
+    productName?: string;
+    contactMethod?: string;
 }
 
 // ============================================
