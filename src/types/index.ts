@@ -46,7 +46,7 @@ export interface Company {
     id: string;
     name: string;
     description: string;
-    rating: number;
+    rating: number | null;
     commentCount: number;
     imageUrl?: string;
     phone: string;

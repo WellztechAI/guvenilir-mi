@@ -209,6 +209,27 @@ export const Header: React.FC = () => {
               Giriş Yap/Kayıt Ol
             </button>
 
+            {/* Admin Giriş button */}
+            <button
+              onClick={() => navigate('/admin/panel')}
+              className="flex items-center justify-center text-white"
+              style={{
+                height: '44px',
+                paddingTop: '10px',
+                paddingBottom: '10px',
+                paddingLeft: '16px',
+                paddingRight: '16px',
+                borderRadius: '22px',
+                backgroundColor: '#8B5CF6',
+                fontFamily: 'Metropolis, sans-serif',
+                fontWeight: 600,
+                fontSize: '14px',
+                lineHeight: '150%',
+              }}
+            >
+              Admin Giriş
+            </button>
+
             {/* İşletmem İçin button - only for non-authenticated users */}
             <button
               onClick={() => navigate('/company-signup')}

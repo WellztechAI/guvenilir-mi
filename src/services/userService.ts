@@ -144,3 +144,23 @@ export const fetchOrCreateUser = async (
 
     return user;
 };
+
+/**
+ * Fetches all users from Firestore
+ */
+export const fetchAllUsers = async (): Promise<User[]> => {
+    try {
+        const { collection, getDocs } = await import('firebase/firestore');
+        const usersRef = collection(db, USERS_COLLECTION);
+        const querySnapshot = await getDocs(usersRef);
+
+        return querySnapshot.docs.map(doc => {
+            const userData = doc.data() as UserFirestore;
+            return userFromFirestore(userData);
+        });
+    } catch (error) {
+        console.error('Error fetching all users:', error);
+        throw error;
+    }
+};
+

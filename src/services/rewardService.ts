@@ -172,3 +172,77 @@ export const validateRewardCode = async (userId: string, code: string): Promise<
         throw error;
     }
 };
+
+// ============================================
+// Top-level Rewards Collection Functions
+// (rewards/{userId})
+// ============================================
+
+/**
+ * Adds a reward to user's rewards document in top-level rewards collection
+ * If user document doesn't exist, creates it with the reward
+ * If it exists, adds the reward to the rewards array
+ */
+export const addRewardToUserDocument = async (
+    userId: string,
+    reward: Omit<Reward, 'id'>
+): Promise<void> => {
+    try {
+        const { doc: firestoreDoc, getDoc: firestoreGetDoc, setDoc: firestoreSetDoc, updateDoc: firestoreUpdateDoc, arrayUnion: firestoreArrayUnion, Timestamp: FirestoreTimestamp } = await import('firebase/firestore');
+        const userRewardsRef = firestoreDoc(db, 'rewards', userId);
+        const userRewardsSnap = await firestoreGetDoc(userRewardsRef);
+
+        // Convert Date to Timestamp for Firestore
+        const rewardData = {
+            ...reward,
+            id: `reward_${Date.now()}`,
+            date: FirestoreTimestamp.fromDate(reward.date),
+        };
+
+        if (!userRewardsSnap.exists()) {
+            // User document doesn't exist, create it with the reward
+            await firestoreSetDoc(userRewardsRef, {
+                userId,
+                rewards: [rewardData],
+            });
+            console.log('✅ Created rewards document for user:', userId);
+        } else {
+            // User document exists, add reward to array
+            await firestoreUpdateDoc(userRewardsRef, {
+                rewards: firestoreArrayUnion(rewardData),
+            });
+            console.log('✅ Added reward to existing user:', userId);
+        }
+    } catch (error) {
+        console.error('❌ Error adding reward to user document:', error);
+        throw error;
+    }
+};
+
+/**
+ * Gets all rewards for a user from top-level rewards collection
+ */
+export const getUserRewardsFromDocument = async (userId: string): Promise<Reward[]> => {
+    try {
+        const { doc: firestoreDoc, getDoc: firestoreGetDoc } = await import('firebase/firestore');
+        const userRewardsRef = firestoreDoc(db, 'rewards', userId);
+        const userRewardsSnap = await firestoreGetDoc(userRewardsRef);
+
+        if (!userRewardsSnap.exists()) {
+            return [];
+        }
+
+        const data = userRewardsSnap.data();
+        const rewards = data.rewards || [];
+
+        // Convert Timestamps back to Dates
+        return rewards.map((reward: any) => ({
+            ...reward,
+            date: reward.date.toDate ? reward.date.toDate() : reward.date,
+        }));
+    } catch (error) {
+        console.error('❌ Error getting user rewards:', error);
+        throw error;
+    }
+};
+
