@@ -141,8 +141,8 @@ export const Header: React.FC = () => {
           </>
         ) : (
           <>
-            <a
-              href="#manifesto"
+            <Link
+              to="/manifest"
               style={{
                 fontFamily: 'Metropolis, sans-serif',
                 fontWeight: 500,
@@ -152,7 +152,7 @@ export const Header: React.FC = () => {
               }}
             >
               Manifesto
-            </a>
+            </Link>
             <a
               href="#kategoriler"
               style={{

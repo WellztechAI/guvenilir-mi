@@ -75,8 +75,8 @@ export const Footer: React.FC = () => {
 
           {/* Links */}
           <nav className="flex flex-col gap-3 mt-4">
-            <a
-              href="#"
+            <Link
+              to="/manifest"
               style={{
                 fontFamily: 'Lato, sans-serif',
                 fontWeight: 500,
@@ -86,9 +86,9 @@ export const Footer: React.FC = () => {
               }}
             >
               Manifest-o
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/sss"
               style={{
                 fontFamily: 'Lato, sans-serif',
                 fontWeight: 500,
@@ -98,9 +98,9 @@ export const Footer: React.FC = () => {
               }}
             >
               Sıkça Sorulan Sorular
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/marka-alani"
               style={{
                 fontFamily: 'Lato, sans-serif',
                 fontWeight: 500,
@@ -110,7 +110,7 @@ export const Footer: React.FC = () => {
               }}
             >
               Marka Alanı
-            </a>
+            </Link>
             <a
               href="#"
               style={{
@@ -183,8 +183,8 @@ export const Footer: React.FC = () => {
           >
             Aydınlatma Metni
           </a>
-          <a
-            href="#"
+          <Link
+            to="/yorum-politikasi"
             style={{
               fontFamily: 'Manrope, sans-serif',
               fontWeight: 400,
@@ -194,9 +194,9 @@ export const Footer: React.FC = () => {
             }}
           >
             Kullanım Şartları
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/topluluk-kurallari"
             style={{
               fontFamily: 'Manrope, sans-serif',
               fontWeight: 400,
@@ -206,7 +206,7 @@ export const Footer: React.FC = () => {
             }}
           >
             Topluluk Kuralları
-          </a>
+          </Link>
           <a
             href="#"
             style={{

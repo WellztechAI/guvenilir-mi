@@ -12,6 +12,11 @@ import AdminPanel from "./pages/AdminPanel";
 import CompanyDetail from "./pages/CompanyDetail";
 import { UserProfile } from "./pages/UserProfile";
 import { CompanyProfile } from "./pages/CompanyProfile";
+import Manifest from "./pages/Manifest";
+import SSS from "./pages/SSS";
+import CommentPolicy from "./pages/CommentPolicy";
+import CommunityRules from "./pages/CommunityRules";
+import BrandArea from "./pages/BrandArea";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +37,11 @@ const App = () => (
             <Route path="/company/:id" element={<CompanyDetail />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/company-profile" element={<CompanyProfile />} />
+            <Route path="/manifest" element={<Manifest />} />
+            <Route path="/sss" element={<SSS />} />
+            <Route path="/yorum-politikasi" element={<CommentPolicy />} />
+            <Route path="/topluluk-kurallari" element={<CommunityRules />} />
+            <Route path="/marka-alani" element={<BrandArea />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
