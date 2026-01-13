@@ -1,0 +1,34 @@
+import React from 'react';
+
+interface PageHeroProps {
+  title: string;
+  className?: string;
+}
+
+export const PageHero: React.FC<PageHeroProps> = ({ title, className = '' }) => {
+  return (
+    <div className={`relative w-full ${className}`}>
+      {/* Extended Gradient Background */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-[300px] w-full z-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(180deg, #13102C 0%, #2D1B69 15%, #4C38A5 30%, #8B7BC7 55%, rgba(245, 246, 248, 0) 100%)'
+        }}
+      />
+      
+      {/* Title Content */}
+      <div className="relative z-10 max-w-4xl mx-auto px-6 pt-32 pb-12">
+        <h1 
+          className="font-manrope font-semibold text-center text-white"
+          style={{ 
+            fontSize: '65px', 
+            lineHeight: '60px', 
+            letterSpacing: '-2%' 
+          }}
+        >
+          {title}
+        </h1>
+      </div>
+    </div>
+  );
+};

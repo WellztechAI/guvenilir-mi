@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 import handShakeIcon from "@/assets/hand-shake.svg";
 import crownIcon from "@/assets/crown.svg";
 import badgeTable from "@/assets/badge-table.png";
@@ -14,38 +15,9 @@ const BrandArea = () => {
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
       
-      {/* Hero Section */}
-      <section className="pt-16 pb-20 px-6 bg-gradient-to-b from-[#F8F7FF] to-white">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 
-            className="font-manrope mb-6"
-            style={{
-              fontWeight: 700,
-              fontSize: '48px',
-              lineHeight: '120%',
-              letterSpacing: '-2%',
-              color: '#1E293B'
-            }}
-          >
-            Marka Alanı
-          </h1>
-          
-          <p 
-            className="font-inter max-w-xl mx-auto"
-            style={{
-              fontWeight: 400,
-              fontSize: '23px',
-              lineHeight: '100%',
-              color: '#64748B'
-            }}
-          >
-            guvenilirmi.co, kullanıcı deneyimlerini yapısal veriye dönüştüren bir Marka Güven Endeksi ve Yorum Analiz Platformudur.
-          </p>
-        </div>
-      </section>
-
+      <PageHero title="Marka Alanı" />
       {/* Content Section */}
-      <section className="py-16 px-6 bg-white">
+      <section className="relative z-10 pb-16 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <p 
             className="font-inter mb-8"
@@ -233,7 +205,7 @@ const BrandArea = () => {
       </section>
 
       {/* Pricing Cards */}
-      <section className="py-16 px-6 bg-[#F8F7FF]">
+      <section className="py-16 px-6 bg-[#F9F9F9]">
         <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
           {/* Free Plan */}
           <div className="bg-white rounded-2xl p-8 shadow-sm">

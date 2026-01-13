@@ -1,30 +1,17 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 
 const Manifest = () => {
   return (
-    <div className="min-h-screen bg-[#F8F8FA]">
+    <div className="min-h-screen bg-[#F5F6F8]">
       <Header />
       
-      {/* Hero Section with Gradient */}
-      <section 
-        className="pt-24 pb-16"
-        style={{
-          background: 'linear-gradient(180deg, #13102C 0%, #F8F8FA 100%)'
-        }}
-      >
+      <PageHero title="Manifest-o" />
+
+      {/* Content Section */}
+      <section className="relative z-10 pb-12">
         <div className="max-w-4xl mx-auto px-6">
-          <h1 
-            className="font-manrope font-semibold text-center text-white mb-12"
-            style={{ 
-              fontSize: '65px', 
-              lineHeight: '60px', 
-              letterSpacing: '-2%' 
-            }}
-          >
-            Manifest-o
-          </h1>
-          
           <div className="space-y-8">
             <p 
               className="font-inter font-medium text-center text-[#090000]"
@@ -63,7 +50,6 @@ const Manifest = () => {
         </div>
       </section>
 
-      {/* Footer Section */}
       <Footer />
     </div>
   );

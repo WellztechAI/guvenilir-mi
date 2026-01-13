@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { PageHero } from "@/components/PageHero";
 
 const faqData = [
   {
@@ -77,27 +78,13 @@ const SSS = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F8FA]">
+    <div className="min-h-screen bg-[#F5F6F8]">
       <Header />
       
-      {/* Hero Section */}
-      <section className="pt-24 pb-12">
-        <div className="max-w-5xl mx-auto px-6">
-          <h1 
-            className="font-manrope font-semibold text-center text-[#1E293B]"
-            style={{ 
-              fontSize: '65px', 
-              lineHeight: '60px', 
-              letterSpacing: '-2%' 
-            }}
-          >
-            Sıkça Sorulan Sorular
-          </h1>
-        </div>
-      </section>
+      <PageHero title="Sıkça Sorulan Sorular" />
 
       {/* FAQ Grid */}
-      <section className="pb-16">
+      <section className="relative z-10 pb-16">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-4">
             {/* Left Column */}
@@ -117,7 +104,6 @@ const SSS = () => {
         </div>
       </section>
 
-      {/* Footer Section */}
       <Footer />
     </div>
   );
