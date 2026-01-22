@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -55,6 +56,8 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   // Debounced search effect
   useEffect(() => {
@@ -82,6 +85,29 @@ const Index = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
+  // Update dropdown position
+  useEffect(() => {
+    const updatePosition = () => {
+      if (searchRef.current) {
+        const rect = searchRef.current.getBoundingClientRect();
+        setDropdownPos({
+          top: rect.bottom + window.scrollY,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition);
+    };
+  }, [showDropdown]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -89,7 +115,11 @@ const Index = () => {
         searchRef.current &&
         !searchRef.current.contains(event.target as Node)
       ) {
-        setShowDropdown(false);
+        // Also check if clicking inside the portal
+        const portal = document.getElementById("search-dropdown-portal");
+        if (portal && !portal.contains(event.target as Node)) {
+          setShowDropdown(false);
+        }
       }
     };
 
@@ -104,7 +134,6 @@ const Index = () => {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       setShowDropdown(false);
-      // Navigate to search results or first result
       if (searchResults.length > 0) {
         navigate(`/company/${searchResults[0].id}`);
       }
@@ -123,12 +152,65 @@ const Index = () => {
     }
   };
 
+  // Search Dropdown Content
+  const DropdownContent = (
+    <div 
+      id="search-dropdown-portal"
+      className="absolute bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[9999]"
+      style={{
+        top: `${dropdownPos.top + 8}px`,
+        left: `${dropdownPos.left}px`,
+        width: `${Math.min(dropdownPos.width * 0.75, dropdownPos.width - 60)}px` // Approximate width matching design
+      }}
+    >
+      {isSearching ? (
+        <div className="p-4 text-center text-gray-500">
+          <span className="animate-pulse">Aranıyor...</span>
+        </div>
+      ) : searchResults.length > 0 ? (
+        <div className="divide-y divide-gray-50">
+          {searchResults.map((company) => (
+            <button
+              key={company.id}
+              onClick={() => handleSelectCompany(company)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center shrink-0">
+                <span className="text-purple-600 text-sm font-semibold">
+                  {company.name.substring(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-800 font-medium truncate">
+                  {company.name}
+                </p>
+                <p className="text-gray-400 text-sm truncate">
+                  {company.sectors?.join(", ") || "Genel"}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-yellow-500">
+                <span className="text-sm">★</span>
+                <span className="text-gray-600 text-sm">
+                  {company.rating?.toFixed(1) || "-"}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : searchQuery.length >= 2 ? (
+        <div className="p-4 text-center text-gray-500">
+          "{searchQuery}" için sonuç bulunamadı
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
 
       {/* Hero Section using PageHero */}
-      <section className="relative w-full pb-80">
+      <section className="relative w-full pb-20">
         <PageHero title="" bgColor="#FFFFFF" />
 
         <div
@@ -171,6 +253,7 @@ const Index = () => {
                     <Search size={20} />
                   </div>
                   <input
+                    ref={inputRef}
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -181,51 +264,7 @@ const Index = () => {
                     placeholder="Arçelik Güvenilir Mi?"
                     className="w-full h-11 pl-12 pr-4 rounded-xl bg-white text-gray-800 placeholder-gray-400 text-base focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-lg"
                   />
-
-                  {/* Search Dropdown */}
-                  {showDropdown && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50">
-                      {isSearching ? (
-                        <div className="p-4 text-center text-gray-500">
-                          <span className="animate-pulse">Aranıyor...</span>
-                        </div>
-                      ) : searchResults.length > 0 ? (
-                        <div className="divide-y divide-gray-50">
-                          {searchResults.map((company) => (
-                            <button
-                              key={company.id}
-                              onClick={() => handleSelectCompany(company)}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                            >
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center shrink-0">
-                                <span className="text-purple-600 text-sm font-semibold">
-                                  {company.name.substring(0, 2).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-gray-800 font-medium truncate">
-                                  {company.name}
-                                </p>
-                                <p className="text-gray-400 text-sm truncate">
-                                  {company.sectors?.join(", ") || "Genel"}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-1 text-yellow-500">
-                                <span className="text-sm">★</span>
-                                <span className="text-gray-600 text-sm">
-                                  {company.rating?.toFixed(1) || "-"}
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ) : searchQuery.length >= 2 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          "{searchQuery}" için sonuç bulunamadı
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
+                  {showDropdown && createPortal(DropdownContent, document.body)}
                 </div>
                 <button
                   onClick={handleSearch}
@@ -278,8 +317,8 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Promotional Section */}
-      <section className="w-full max-w-[1200px] mx-auto px-4 py-16">
+      {/* Promotional Section - Moved Up */}
+      <section className="w-full max-w-[1200px] mx-auto px-4 mt-8 pb-16">
         {/* Main Tagline */}
         <h2 className="text-4xl md:text-5xl font-bold text-center text-gray-800 mb-4 leading-tight">
           Senin sesin,
@@ -463,7 +502,7 @@ const Index = () => {
       </section>
 
       {/* Horizontal Review Cards Carousel */}
-      <section className="w-full bg-gray-50 py-16">
+      <section className="w-full bg-white py-16">
         <div className="max-w-[1200px] mx-auto px-4">
           {/* Section Title */}
           <div className="text-center mb-12">

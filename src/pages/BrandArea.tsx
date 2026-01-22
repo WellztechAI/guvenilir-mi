@@ -9,37 +9,40 @@ import badgeTable from "@/assets/badge-table.png";
 import badgeExamples from "@/assets/badge-examples.png";
 
 const BrandArea = () => {
-  const [billingPeriod, setBillingPeriod] = useState<'yearly' | 'monthly'>('yearly');
+  const [billingPeriod, setBillingPeriod] = useState<"yearly" | "monthly">(
+    "yearly",
+  );
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-[#F9F9F9] flex flex-col">
       <Header />
-      
-      <PageHero title="Marka Alanı" />
+
+      <PageHero title="Marka Alanı" bgColor="#F9F9F9" />
       {/* Content Section */}
       <section className="relative z-10 pb-16 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <p 
+          <p
             className="font-inter mb-8"
             style={{
               fontWeight: 400,
-              fontSize: '24px',
-              lineHeight: '100%',
-              color: '#1E293B'
+              fontSize: "24px",
+              lineHeight: "100%",
+              color: "#1E293B",
             }}
           >
-            Türkiye'de tüketiciler satın alma kararlarını artık tek bir soruyla başlatıyor:
+            Türkiye'de tüketiciler satın alma kararlarını artık tek bir soruyla
+            başlatıyor:
             <br />
             "X markası güvenilir mi?"
           </p>
-          
-          <p 
+
+          <p
             className="font-inter mb-16"
             style={{
               fontWeight: 400,
-              fontSize: '24px',
-              lineHeight: '100%',
-              color: '#1E293B'
+              fontSize: "24px",
+              lineHeight: "100%",
+              color: "#1E293B",
             }}
           >
             Biz de tam bu soruya sistematik bir cevap üretiyoruz.
@@ -47,27 +50,28 @@ const BrandArea = () => {
 
           {/* Neden Buradasınız Section */}
           <div className="mb-16">
-            <h3 
+            <h3
               className="font-inter mb-4"
               style={{
                 fontWeight: 700,
-                fontSize: '24px',
-                lineHeight: '100%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "100%",
+                color: "#1E293B",
               }}
             >
               Neden Buradasınız?
             </h3>
-            <p 
+            <p
               className="font-inter"
               style={{
                 fontWeight: 400,
-                fontSize: '24px',
-                lineHeight: '140%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "140%",
+                color: "#1E293B",
               }}
             >
-              Tüketiciler markanıza dair gerçek kullanıcı deneyimlerini görmek istiyor.
+              Tüketiciler markanıza dair gerçek kullanıcı deneyimlerini görmek
+              istiyor.
               <br />
               Google'da adınız "güvenilir mi?" ile aranıyor.
             </p>
@@ -75,16 +79,17 @@ const BrandArea = () => {
 
           {/* Rekabet Section */}
           <div className="mb-16">
-            <p 
+            <p
               className="font-inter mb-8"
               style={{
                 fontWeight: 400,
-                fontSize: '24px',
-                lineHeight: '140%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "140%",
+                color: "#1E293B",
               }}
             >
-              Rekabette öne çıkmanın en güçlü yolu: Güven duygusu veren markalar.
+              Rekabette öne çıkmanın en güçlü yolu: Güven duygusu veren
+              markalar.
               <br />
               Biz ise markanızın itibarını rastlantıya bırakmıyoruz.
             </p>
@@ -92,66 +97,69 @@ const BrandArea = () => {
 
           {/* Güvenilir Marka Rozeti Section */}
           <div className="mb-16">
-            <h3 
+            <h3
               className="font-inter mb-4"
               style={{
                 fontWeight: 700,
-                fontSize: '24px',
-                lineHeight: '100%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "100%",
+                color: "#1E293B",
               }}
             >
               Güvenilir Marka Rozeti (Badge)
             </h3>
-            <p 
+            <p
               className="font-inter"
               style={{
                 fontWeight: 400,
-                fontSize: '24px',
-                lineHeight: '140%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "140%",
+                color: "#1E293B",
               }}
             >
               Objektif tüketici Güvenilir olduğunuzu kanıtlayın.
               <br />
-              Bu rozeti web sitenizde badge olarak kullanabilirsiniz. Size ileteceğimiz dinamik bir kod aracılığıyla kolayca entegre edebilirsiniz. Güncel yorum sayınız ve genel puanınız otomatik olarak badge'inize sirayet eder.
+              Bu rozeti web sitenizde badge olarak kullanabilirsiniz. Size
+              ileteceğimiz dinamik bir kod aracılığıyla kolayca entegre
+              edebilirsiniz. Güncel yorum sayınız ve genel puanınız otomatik
+              olarak badge'inize sirayet eder.
             </p>
           </div>
 
           {/* Badge Images */}
           <div className="flex flex-col md:flex-row gap-6 justify-center items-center mb-16">
-            <img 
-              src={badgeTable} 
-              alt="Değerlendirme tablosu" 
+            <img
+              src={badgeTable}
+              alt="Değerlendirme tablosu"
               className="max-w-md w-full rounded-lg"
             />
-            <img 
-              src={badgeExamples} 
-              alt="Badge örnekleri" 
+            <img
+              src={badgeExamples}
+              alt="Badge örnekleri"
               className="max-w-md w-full rounded-lg"
             />
           </div>
 
           {/* Güvenilirliği Ölçülebilir Kılın Section */}
           <div className="mb-16">
-            <h3 
+            <h3
               className="font-inter mb-4"
               style={{
                 fontWeight: 700,
-                fontSize: '24px',
-                lineHeight: '100%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "100%",
+                color: "#1E293B",
               }}
             >
               Güvenilirliği Ölçülebilir Kılın
             </h3>
-            <p 
+            <p
               className="font-inter"
               style={{
                 fontWeight: 400,
-                fontSize: '24px',
-                lineHeight: '140%',
-                color: '#1E293B'
+                fontSize: "24px",
+                lineHeight: "140%",
+                color: "#1E293B",
               }}
             >
               İtibar yönetimi artık sadece sorun çözmek değil, güven üretmektir.
@@ -165,14 +173,15 @@ const BrandArea = () => {
           </div>
 
           {/* CTA Button */}
-          <button 
+          <button
             className="font-urbanist px-8 py-3 rounded-lg mb-12"
             style={{
-              background: 'linear-gradient(97.8deg, #1F134A -1.21%, #5947A9 120.56%)',
+              background:
+                "linear-gradient(97.8deg, #1F134A -1.21%, #5947A9 120.56%)",
               fontWeight: 700,
-              fontSize: '16px',
-              lineHeight: '110%',
-              color: '#FFFFFF'
+              fontSize: "16px",
+              lineHeight: "110%",
+              color: "#FFFFFF",
             }}
           >
             Hemen Başvurun!
@@ -181,21 +190,24 @@ const BrandArea = () => {
           {/* Billing Toggle */}
           <div className="flex items-center justify-center gap-4 mb-16">
             <button
-              onClick={() => setBillingPeriod('yearly')}
+              onClick={() => setBillingPeriod("yearly")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                billingPeriod === 'yearly' 
-                  ? 'bg-[#1E293B] text-white' 
-                  : 'bg-transparent text-[#64748B]'
+                billingPeriod === "yearly"
+                  ? "bg-[#1E293B] text-white"
+                  : "bg-transparent text-[#64748B]"
               }`}
             >
-              Yıllık <span className="text-xs ml-1 px-1 py-0.5 bg-white/20 rounded">X-20</span>
+              Yıllık{" "}
+              <span className="text-xs ml-1 px-1 py-0.5 bg-white/20 rounded">
+                X-20
+              </span>
             </button>
             <button
-              onClick={() => setBillingPeriod('monthly')}
+              onClick={() => setBillingPeriod("monthly")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                billingPeriod === 'monthly' 
-                  ? 'bg-[#1E293B] text-white' 
-                  : 'bg-transparent text-[#64748B]'
+                billingPeriod === "monthly"
+                  ? "bg-[#1E293B] text-white"
+                  : "bg-transparent text-[#64748B]"
               }`}
             >
               Aylık
@@ -210,95 +222,96 @@ const BrandArea = () => {
           {/* Free Plan */}
           <div className="bg-white rounded-2xl p-8 shadow-sm">
             {/* Icon */}
-            <div 
+            <div
               className="w-[69px] h-[69px] rounded-full flex items-center justify-center mb-6"
               style={{
-                background: 'rgba(159, 112, 252, 0.15)',
-                border: '4px solid rgba(159, 112, 252, 0.1)'
+                background: "rgba(159, 112, 252, 0.15)",
+                border: "4px solid rgba(159, 112, 252, 0.1)",
               }}
             >
               <img src={handShakeIcon} alt="" className="w-10 h-10" />
             </div>
 
-            <h3 
+            <h3
               className="font-manrope mb-2"
               style={{
                 fontWeight: 700,
-                fontSize: '24px',
-                color: '#1E293B'
+                fontSize: "24px",
+                color: "#1E293B",
               }}
             >
               Ücretsiz Plan
             </h3>
-            
-            <p 
+
+            <p
               className="font-manrope mb-6"
               style={{
                 fontWeight: 400,
-                fontSize: '16px',
-                lineHeight: '140%',
-                color: '#64748B'
+                fontSize: "16px",
+                lineHeight: "140%",
+                color: "#64748B",
               }}
             >
-              Marka profilinizi ücretsiz doğrula. Güven skoru badge'ini ücretsiz bir şekilde web sitenizde yayınla, güven kazanın!
+              Marka profilinizi ücretsiz doğrula. Güven skoru badge'ini ücretsiz
+              bir şekilde web sitenizde yayınla, güven kazanın!
             </p>
 
             <div className="border-t border-[#E2E8F0] my-6" />
 
-            <p 
+            <p
               className="font-urbanist text-center mb-6"
               style={{
                 fontWeight: 700,
-                fontSize: '32px',
-                lineHeight: '120%',
-                color: '#1E293B'
+                fontSize: "32px",
+                lineHeight: "120%",
+                color: "#1E293B",
               }}
             >
               Ücretsiz
             </p>
 
-            <button 
+            <button
               className="w-full py-3 rounded-[26px] border border-[#E2E8F0] font-manrope mb-8"
               style={{
                 fontWeight: 700,
-                fontSize: '16px',
-                lineHeight: '110%',
-                color: '#1E293B'
+                fontSize: "16px",
+                lineHeight: "110%",
+                color: "#1E293B",
               }}
             >
               Marka Doğrulaması Başlat
             </button>
 
-            <h4 
+            <h4
               className="font-manrope text-center mb-6"
               style={{
                 fontWeight: 700,
-                fontSize: '20px',
-                lineHeight: '120%',
-                color: '#1E293B'
+                fontSize: "20px",
+                lineHeight: "120%",
+                color: "#1E293B",
               }}
             >
               Plana Neler Dahil?
             </h4>
 
             <div className="space-y-4">
-              <PlanFeature 
-                title="Markamı ücretsiz doğrulat" 
+              <PlanFeature
+                title="Markamı ücretsiz doğrulat"
                 description="Marka başvurunuzu Onaylıyoruz Markayı silinen tüketiciler için platformda gözükür."
                 color="#9F70FC"
               />
-              <PlanFeature 
-                title="Marka puan badge'ini ücretsiz yayınla" 
+              <PlanFeature
+                title="Marka puan badge'ini ücretsiz yayınla"
                 description="Sitenize, sosyal medya içerikleri bir a, profilde, mağaza ve ödeme sayfanız hep yanında olsun, güven kazandıran alana elde edin."
                 color="#9F70FC"
               />
-              <PlanFeature 
-                title="Ücretsiz web site yönlendirmesi" 
+              <PlanFeature
+                title="Ücretsiz web site yönlendirmesi"
                 description="guvenilirmi.co/[Siz kendi marka sayfanıza] giren web site yönlendirmesiyle öretin sonuç yayınla."
                 color="#9F70FC"
               />
-              <PlanFeature 
-                title="Marka logonu ücretsiz yayınla" 
+              <PlanFeature
+                title="Marka logonu ücretsiz yayınla"
                 description="Güvenilir marka konumu markanınızın tescilli logoss onayını yayınla."
                 color="#9F70FC"
               />
@@ -308,45 +321,45 @@ const BrandArea = () => {
           {/* Plus Plan */}
           <div className="bg-white rounded-2xl p-8 shadow-sm">
             {/* Icon */}
-            <div 
+            <div
               className="w-[69px] h-[69px] rounded-full flex items-center justify-center mb-6"
               style={{
-                background: 'rgba(236, 72, 153, 0.12)',
-                border: '4px solid rgba(236, 72, 153, 0.1)'
+                background: "rgba(236, 72, 153, 0.12)",
+                border: "4px solid rgba(236, 72, 153, 0.1)",
               }}
             >
               <img src={crownIcon} alt="" className="w-10 h-10" />
             </div>
 
             <div className="flex items-center gap-3 mb-2">
-              <h3 
+              <h3
                 className="font-manrope"
                 style={{
                   fontWeight: 700,
-                  fontSize: '24px',
-                  color: '#1E293B'
+                  fontSize: "24px",
+                  color: "#1E293B",
                 }}
               >
                 Plus
               </h3>
-              <span 
+              <span
                 className="px-2 py-1 rounded text-xs font-medium"
                 style={{
-                  background: 'rgba(236, 72, 153, 0.1)',
-                  color: '#EC4899'
+                  background: "rgba(236, 72, 153, 0.1)",
+                  color: "#EC4899",
                 }}
               >
                 30 Gün Ücretsiz
               </span>
             </div>
-            
-            <p 
+
+            <p
               className="font-manrope mb-6"
               style={{
                 fontWeight: 400,
-                fontSize: '16px',
-                lineHeight: '140%',
-                color: '#64748B'
+                fontSize: "16px",
+                lineHeight: "140%",
+                color: "#64748B",
               }}
             >
               Ücretsiz plana ek olarak platformda ekstra özelliklere sahip ol.
@@ -354,66 +367,67 @@ const BrandArea = () => {
 
             <div className="border-t border-[#E2E8F0] my-6" />
 
-            <p 
+            <p
               className="font-urbanist text-center mb-2"
               style={{
                 fontWeight: 700,
-                fontSize: '32px',
-                lineHeight: '120%',
-                color: '#1E293B'
+                fontSize: "32px",
+                lineHeight: "120%",
+                color: "#1E293B",
               }}
             >
               999₺ + KDV/Ay
             </p>
-            <p 
+            <p
               className="font-manrope text-center mb-6"
               style={{
                 fontWeight: 400,
-                fontSize: '14px',
-                color: '#64748B'
+                fontSize: "14px",
+                color: "#64748B",
               }}
             >
               Aylık olarak faturalandırılır
             </p>
 
-            <button 
+            <button
               className="w-full py-3 rounded-lg font-urbanist mb-8"
               style={{
-                background: 'linear-gradient(97.8deg, #1F134A -1.21%, #5947A9 120.56%)',
+                background:
+                  "linear-gradient(97.8deg, #1F134A -1.21%, #5947A9 120.56%)",
                 fontWeight: 700,
-                fontSize: '16px',
-                lineHeight: '110%',
-                color: '#FFFFFF'
+                fontSize: "16px",
+                lineHeight: "110%",
+                color: "#FFFFFF",
               }}
             >
               Hemen Plus'a Yükselt
             </button>
 
-            <h4 
+            <h4
               className="font-manrope text-center mb-6"
               style={{
                 fontWeight: 700,
-                fontSize: '20px',
-                lineHeight: '120%',
-                color: '#1E293B'
+                fontSize: "20px",
+                lineHeight: "120%",
+                color: "#1E293B",
               }}
             >
               Plana Neler Dahil?
             </h4>
 
             <div className="space-y-4">
-              <PlanFeature 
-                title="Marka taleselı" 
+              <PlanFeature
+                title="Marka taleselı"
                 description="Marka profilinize yorum gönderen kullanıcılara en yüksek sıraya güvenilirlik onayı ver ve soruna düştüğünde iletişimi başlat."
                 color="#EF4D9D"
               />
-              <PlanFeature 
-                title="Yapılan yorumları anında öğren!" 
+              <PlanFeature
+                title="Yapılan yorumları anında öğren!"
                 description="Yeni bir müşteriniz yaptığı yorum platform üzerinden e-postamanıza ve uygulamanıza bildirim olarak iletilir."
                 color="#EF4D9D"
               />
-              <PlanFeature 
-                title="Yorum sabitleme" 
+              <PlanFeature
+                title="Yorum sabitleme"
                 description="Marka hareketinizi yapan yorum listesinde en mütevazi size özellikler."
                 color="#EF4D9D"
               />
@@ -435,31 +449,31 @@ interface PlanFeatureProps {
 
 const PlanFeature = ({ title, description, color }: PlanFeatureProps) => (
   <div className="flex gap-3">
-    <div 
+    <div
       className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
       style={{ backgroundColor: color }}
     >
       <Check className="w-3 h-3 text-white" />
     </div>
     <div>
-      <p 
+      <p
         className="font-manrope"
         style={{
           fontWeight: 700,
-          fontSize: '16px',
-          lineHeight: '100%',
-          color: '#8E8E93'
+          fontSize: "16px",
+          lineHeight: "100%",
+          color: "#8E8E93",
         }}
       >
         {title}
       </p>
-      <p 
+      <p
         className="font-manrope mt-1"
         style={{
           fontWeight: 400,
-          fontSize: '12px',
-          lineHeight: '100%',
-          color: '#8E8E93'
+          fontSize: "12px",
+          lineHeight: "100%",
+          color: "#8E8E93",
         }}
       >
         {description}
