@@ -32,8 +32,8 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, compa
         setIsSubmitting(true);
         try {
             await createComment(
-                user,
-                company,
+                user.id,
+                company.id,
                 rating,
                 description,
                 productInput,

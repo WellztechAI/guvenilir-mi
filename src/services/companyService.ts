@@ -1,56 +1,94 @@
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc, query, where, getDocs, orderBy, limit, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { api } from '@/lib/api';
 import { Company } from '@/types';
 
-const COMPANIES_COLLECTION = 'companies';
+// ============================================
+// API Response Types
+// ============================================
 
-/**
- * Creates a new company in Firestore
- */
-export const createCompany = async (company: Omit<Company, 'id'>): Promise<string> => {
-    try {
-        console.log('Creating company:', company.name);
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const docRef = await addDoc(companiesRef, company);
-        console.log('Company created successfully:', docRef.id);
-        return docRef.id;
-    } catch (error) {
-        console.error('Error creating company:', error);
-        throw error;
-    }
-};
+interface ApiCompany {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    phone?: string;
+    image_url?: string;
+    status: string;
+    rating: number | null;
+    comment_count: number;
+    sectors?: string[];
+    created_at: string;
+}
 
-/**
- * Creates a company with a specific ID
- */
-export const createCompanyWithId = async (id: string, company: Omit<Company, 'id'>): Promise<void> => {
-    try {
-        console.log('Creating company with ID:', id);
-        const companyRef = doc(db, COMPANIES_COLLECTION, id);
-        await setDoc(companyRef, company);
-        console.log('Company created successfully with ID:', id);
-    } catch (error) {
-        console.error('Error creating company:', error);
-        throw error;
-    }
-};
+interface SearchResponse {
+    data: ApiCompany[];
+    pagination: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
+    };
+}
+
+interface SuggestResponse {
+    suggestions: Array<{
+        id: string;
+        name: string;
+        slug: string;
+        rating: number | null;
+    }>;
+}
+
+// ============================================
+// Helper: Convert API response to Company type
+// ============================================
+
+const apiCompanyToCompany = (apiCompany: ApiCompany): Company => ({
+    id: apiCompany.id,
+    name: apiCompany.name,
+    description: apiCompany.description || '',
+    rating: apiCompany.rating,
+    commentCount: apiCompany.comment_count,
+    imageUrl: apiCompany.image_url,
+    phone: apiCompany.phone || '',
+    sectors: apiCompany.sectors || [],
+    status: apiCompany.status,
+});
+
+// ============================================
+// Company CRUD Operations (using Backend API)
+// ============================================
 
 /**
  * Fetches a company by ID
  */
 export const fetchCompany = async (companyId: string): Promise<Company | null> => {
     try {
-        const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
-        const companySnap = await getDoc(companyRef);
-
-        if (!companySnap.exists()) {
+        const response = await api.get<{ data: ApiCompany }>(`/api/companies/id/${companyId}`);
+        return apiCompanyToCompany(response.data);
+    } catch (error: any) {
+        if (error.message?.includes('404') || error.message?.includes('not found')) {
             console.log('No company found with ID:', companyId);
             return null;
         }
-
-        return { ...companySnap.data(), id: companySnap.id } as Company;
-    } catch (error) {
         console.error('Error fetching company:', error);
+        throw error;
+    }
+};
+
+/**
+ * Fetches a company by slug
+ */
+export const fetchCompanyBySlug = async (slug: string): Promise<Company | null> => {
+    try {
+        const response = await api.get<{ data: ApiCompany }>(`/api/companies/${slug}`);
+        return apiCompanyToCompany(response.data);
+    } catch (error: any) {
+        if (error.message?.includes('404') || error.message?.includes('not found')) {
+            console.log('No company found with slug:', slug);
+            return null;
+        }
+        console.error('Error fetching company by slug:', error);
         throw error;
     }
 };
@@ -58,15 +96,28 @@ export const fetchCompany = async (companyId: string): Promise<Company | null> =
 /**
  * Fetches all companies
  */
-export const fetchAllCompanies = async (): Promise<Company[]> => {
+export const fetchAllCompanies = async (options?: {
+    status?: string;
+    sector?: string;
+    sort?: string;
+    order?: 'ASC' | 'DESC';
+    limit?: number;
+    offset?: number;
+}): Promise<Company[]> => {
     try {
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const querySnapshot = await getDocs(companiesRef);
+        const params = new URLSearchParams();
+        if (options?.status) params.append('status', options.status);
+        if (options?.sector) params.append('sector', options.sector);
+        if (options?.sort) params.append('sort', options.sort);
+        if (options?.order) params.append('order', options.order);
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
 
-        return querySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-        } as Company));
+        const queryString = params.toString();
+        const url = `/api/companies${queryString ? `?${queryString}` : ''}`;
+
+        const response = await api.get<{ data: ApiCompany[]; pagination: any }>(url);
+        return response.data.map(apiCompanyToCompany);
     } catch (error) {
         console.error('Error fetching companies:', error);
         throw error;
@@ -77,88 +128,86 @@ export const fetchAllCompanies = async (): Promise<Company[]> => {
  * Fetches companies by status
  */
 export const fetchCompaniesByStatus = async (status: string): Promise<Company[]> => {
-    try {
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const q = query(companiesRef, where('status', '==', status));
-        const querySnapshot = await getDocs(q);
-
-        return querySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-        } as Company));
-    } catch (error) {
-        console.error('Error fetching companies by status:', error);
-        throw error;
-    }
+    return fetchAllCompanies({ status });
 };
 
 /**
  * Fetches companies by sector
  */
 export const fetchCompaniesBySector = async (sector: string): Promise<Company[]> => {
-    try {
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const q = query(companiesRef, where('sectors', 'array-contains', sector));
-        const querySnapshot = await getDocs(q);
-
-        return querySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-        } as Company));
-    } catch (error) {
-        console.error('Error fetching companies by sector:', error);
-        throw error;
-    }
+    return fetchAllCompanies({ sector });
 };
 
 /**
  * Fetches top-rated companies
  */
 export const fetchTopRatedCompanies = async (limitCount: number = 10): Promise<Company[]> => {
-    try {
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const q = query(
-            companiesRef,
-            where('status', '==', 'active'),
-            orderBy('rating', 'desc'),
-            limit(limitCount)
-        );
-        const querySnapshot = await getDocs(q);
-
-        return querySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            id: doc.id,
-        } as Company));
-    } catch (error) {
-        console.error('Error fetching top-rated companies:', error);
-        throw error;
-    }
+    return fetchAllCompanies({
+        status: 'active',
+        sort: 'rating',
+        order: 'DESC',
+        limit: limitCount,
+    });
 };
 
-/**
- * Searches companies by name
- */
-export const searchCompaniesByName = async (searchTerm: string): Promise<Company[]> => {
-    try {
-        // Note: Firestore doesn't support native text search
-        // For a production app, consider using Algolia or similar
-        const companiesRef = collection(db, COMPANIES_COLLECTION);
-        const querySnapshot = await getDocs(companiesRef);
+// ============================================
+// Search Functions (using Backend API)
+// ============================================
 
-        const searchLower = searchTerm.toLowerCase();
-        return querySnapshot.docs
-            .map(doc => ({
-                ...doc.data(),
-                id: doc.id,
-            } as Company))
-            .filter(company =>
-                company.name.toLowerCase().includes(searchLower)
-            );
+/**
+ * Searches companies by name using the backend search API
+ */
+export const searchCompaniesByName = async (searchTerm: string, options?: {
+    sector?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<Company[]> => {
+    try {
+        if (!searchTerm || searchTerm.trim().length < 1) {
+            return [];
+        }
+
+        const params = new URLSearchParams();
+        params.append('q', searchTerm.trim());
+        if (options?.sector) params.append('sector', options.sector);
+        if (options?.status) params.append('status', options.status);
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
+
+        const response = await api.get<SearchResponse>(`/api/search/companies?${params.toString()}`);
+        return response.data.map(apiCompanyToCompany);
     } catch (error) {
         console.error('Error searching companies:', error);
         throw error;
     }
 };
+
+/**
+ * Gets autocomplete suggestions for company search
+ */
+export const getCompanySuggestions = async (query: string): Promise<Array<{
+    id: string;
+    name: string;
+    slug: string;
+    rating: number | null;
+}>> => {
+    try {
+        if (!query || query.trim().length < 1) {
+            return [];
+        }
+
+        const response = await api.get<SuggestResponse>(`/api/search/suggest?q=${encodeURIComponent(query.trim())}`);
+        return response.suggestions || [];
+    } catch (error) {
+        console.error('Error getting company suggestions:', error);
+        return [];
+    }
+};
+
+// ============================================
+// Company Update Operations (using Backend API)
+// ============================================
 
 /**
  * Updates a company
@@ -168,8 +217,7 @@ export const updateCompany = async (
     updates: Partial<Omit<Company, 'id'>>
 ): Promise<void> => {
     try {
-        const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
-        await updateDoc(companyRef, updates);
+        await api.put(`/api/companies/${companyId}`, updates);
         console.log('Company updated:', companyId);
     } catch (error) {
         console.error('Error updating company:', error);
@@ -182,28 +230,10 @@ export const updateCompany = async (
  */
 export const updateCompanyRating = async (companyId: string, newRating: number): Promise<void> => {
     try {
-        const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
-        await updateDoc(companyRef, { rating: newRating });
+        await api.put(`/api/companies/${companyId}`, { rating: newRating });
         console.log('Company rating updated:', companyId, newRating);
     } catch (error) {
         console.error('Error updating company rating:', error);
-        throw error;
-    }
-};
-
-/**
- * Increments company comment count
- */
-export const incrementCompanyCommentCount = async (companyId: string): Promise<void> => {
-    try {
-        const company = await fetchCompany(companyId);
-        if (company) {
-            const newCount = (company.commentCount || 0) + 1;
-            await updateDoc(doc(db, COMPANIES_COLLECTION, companyId), { commentCount: newCount });
-            console.log('Company comment count incremented:', companyId, newCount);
-        }
-    } catch (error) {
-        console.error('Error incrementing comment count:', error);
         throw error;
     }
 };
@@ -213,8 +243,7 @@ export const incrementCompanyCommentCount = async (companyId: string): Promise<v
  */
 export const updateCompanyStatus = async (companyId: string, status: string): Promise<void> => {
     try {
-        const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
-        await updateDoc(companyRef, { status });
+        await api.put(`/api/companies/${companyId}`, { status });
         console.log('Company status updated:', companyId, status);
     } catch (error) {
         console.error('Error updating company status:', error);
@@ -222,53 +251,9 @@ export const updateCompanyStatus = async (companyId: string, status: string): Pr
     }
 };
 
-/**
- * Deletes a company
- */
-export const deleteCompany = async (companyId: string): Promise<void> => {
-    try {
-        const companyRef = doc(db, COMPANIES_COLLECTION, companyId);
-        await deleteDoc(companyRef);
-        console.log('Company deleted:', companyId);
-    } catch (error) {
-        console.error('Error deleting company:', error);
-        throw error;
-    }
-};
-
-/**
- * Creates a company from an approved verification
- */
-export const createCompanyFromVerification = async (
-    verification: any,
-    updateVerificationWithCompanyId: (verificationId: string, companyId: string) => Promise<void>
-): Promise<string> => {
-    try {
-        console.log('Creating company from verification:', verification.id);
-        
-        const company: Omit<Company, 'id'> = {
-            name: verification.requesterName,
-            description: '',
-            rating: null, // null instead of 0
-            commentCount: 0,
-            phone: verification.requesterPhoneNumber || '',
-            sectors: [],
-            status: 'active',
-        };
-        
-        // Always create with auto-generated ID
-        const companyId = await createCompany(company);
-        console.log('Company created successfully:', companyId);
-        
-        // Save companyId to verification
-        await updateVerificationWithCompanyId(verification.id, companyId);
-        
-        return companyId;
-    } catch (error) {
-        console.error('Error creating company from verification:', error);
-        throw error;
-    }
-};
+// ============================================
+// Helper Functions
+// ============================================
 
 /**
  * Fetches multiple companies by their IDs
@@ -280,8 +265,8 @@ export const fetchCompaniesByIds = async (companyIds: string[]): Promise<Company
         }
 
         const companies: Company[] = [];
-        
-        // Fetch each company individually
+
+        // Fetch each company individually (could be optimized with batch endpoint)
         for (const companyId of companyIds) {
             const company = await fetchCompany(companyId);
             if (company) {
@@ -307,11 +292,85 @@ export const createDefaultCompany = (
     return {
         name,
         description,
-        rating: 0,
+        rating: null,
         commentCount: 0,
         imageUrl: undefined,
         phone: '',
         sectors,
         status: 'pending',
     };
+};
+
+// ============================================
+// Global Search (Companies + Comments)
+// ============================================
+
+interface GlobalSearchResponse {
+    companies: ApiCompany[];
+    comments: Array<{
+        id: string;
+        author_id: string;
+        author_name: string;
+        company_id: string;
+        company_name: string;
+        created_at: string;
+        rating: number;
+        status: string;
+        message: string;
+        likes_count: number;
+    }>;
+}
+
+/**
+ * Global search across companies and comments
+ * GET /api/search?q=search+term&limit=10
+ */
+export const globalSearch = async (
+    searchTerm: string,
+    limit: number = 10
+): Promise<{
+    companies: Company[];
+    comments: Array<{
+        id: string;
+        authorId: string;
+        authorName: string;
+        companyId: string;
+        companyName: string;
+        date: Date;
+        rating: number;
+        status: string;
+        message: string;
+        likesCount: number;
+    }>;
+}> => {
+    try {
+        if (!searchTerm || searchTerm.trim().length < 1) {
+            return { companies: [], comments: [] };
+        }
+
+        const params = new URLSearchParams();
+        params.append('q', searchTerm.trim());
+        params.append('limit', limit.toString());
+
+        const response = await api.get<GlobalSearchResponse>(`/api/search?${params.toString()}`);
+
+        return {
+            companies: (response.companies || []).map(apiCompanyToCompany),
+            comments: (response.comments || []).map(c => ({
+                id: c.id,
+                authorId: c.author_id,
+                authorName: c.author_name || 'Anonim',
+                companyId: c.company_id,
+                companyName: c.company_name || '',
+                date: new Date(c.created_at),
+                rating: c.rating || 0,
+                status: c.status || 'pending',
+                message: c.message || '',
+                likesCount: c.likes_count || 0,
+            })),
+        };
+    } catch (error) {
+        console.error('Error performing global search:', error);
+        return { companies: [], comments: [] };
+    }
 };

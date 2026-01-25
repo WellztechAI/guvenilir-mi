@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import {
-    signInWithEmail,
-    signUpWithEmail,
-    signInWithGoogle,
-    signOut,
-    resetPassword,
-} from '@/services/authService';
+    loginWithEmail,
+    registerWithEmail,
+    logout as apiLogout,
+    changePassword as apiChangePassword,
+    updateStoredUser,
+} from '@/services/authApiService';
 import { useAuthStore, useUser, useIsAuthenticated, useIsAuthLoading } from '@/store/authStore';
+import { User } from '@/types';
 
 /**
  * Custom hook for authentication operations
@@ -19,7 +20,8 @@ export const useAuth = () => {
     const user = useUser();
     const isAuthenticated = useIsAuthenticated();
     const isAuthLoading = useIsAuthLoading();
-    const firebaseUser = useAuthStore((state) => state.firebaseUser);
+
+    const { setUser, setUserType, clearAuth } = useAuthStore();
 
     /**
      * Sign in with email and password
@@ -28,8 +30,21 @@ export const useAuth = () => {
         setIsLoading(true);
         setError(null);
         try {
-            await signInWithEmail(email, password);
-            // AuthProvider will handle the rest via onAuthStateChanged
+            const apiUser = await loginWithEmail(email, password);
+            // Convert API user to app User type
+            const appUser: User = {
+                id: apiUser.id,
+                userName: apiUser.userName,
+                email: apiUser.email,
+                phoneNumber: apiUser.phoneNumber,
+                country: apiUser.country,
+                imageUrl: apiUser.imageUrl,
+                status: apiUser.status,
+                createdAt: apiUser.createdAt,
+                favouriteCompanies: apiUser.favouriteCompanies,
+            };
+            setUser(appUser);
+            setUserType('user');
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Login failed';
             setError(errorMessage);
@@ -41,8 +56,6 @@ export const useAuth = () => {
 
     /**
      * Sign up with email and password
-     * userType: 'user' for normal users, 'company' for company accounts
-     * userName: The actual display name to store in Firestore
      */
     const register = async (
         email: string,
@@ -54,17 +67,27 @@ export const useAuth = () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Store pending data in Zustand for AuthProvider to use
-            const authStore = useAuthStore.getState();
-            authStore.setPendingPhoneNumber(phoneNumber || null);
-            authStore.setPendingUserName(userName || null);
-
-            await signUpWithEmail(email, password, userType);
-            // AuthProvider will handle the rest via onAuthStateChanged
+            const apiUser = await registerWithEmail(
+                email,
+                password,
+                userName || email.split('@')[0],
+                phoneNumber
+            );
+            // Convert API user to app User type
+            const appUser: User = {
+                id: apiUser.id,
+                userName: apiUser.userName,
+                email: apiUser.email,
+                phoneNumber: apiUser.phoneNumber,
+                country: apiUser.country,
+                imageUrl: apiUser.imageUrl,
+                status: apiUser.status,
+                createdAt: apiUser.createdAt,
+                favouriteCompanies: apiUser.favouriteCompanies || [],
+            };
+            setUser(appUser);
+            setUserType(userType);
         } catch (err) {
-            const authStore = useAuthStore.getState();
-            authStore.setPendingPhoneNumber(null);
-            authStore.setPendingUserName(null);
             const errorMessage = err instanceof Error ? err.message : 'Registration failed';
             setError(errorMessage);
             throw err;
@@ -74,14 +97,14 @@ export const useAuth = () => {
     };
 
     /**
-     * Sign in with Google
+     * Sign in with Google (placeholder - to be implemented with OAuth)
      */
     const loginWithGoogle = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            await signInWithGoogle();
-            // AuthProvider will handle the rest via onAuthStateChanged
+            // TODO: Implement Google OAuth with backend
+            throw new Error('Google login is not yet implemented');
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Google login failed';
             setError(errorMessage);
@@ -98,8 +121,8 @@ export const useAuth = () => {
         setIsLoading(true);
         setError(null);
         try {
-            await signOut();
-            // AuthProvider will handle the rest via onAuthStateChanged
+            apiLogout();
+            clearAuth();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Logout failed';
             setError(errorMessage);
@@ -110,15 +133,18 @@ export const useAuth = () => {
     };
 
     /**
-     * Send password reset email
+     * Change password
      */
-    const sendPasswordReset = async (email: string) => {
+    const changeUserPassword = async (currentPassword: string, newPassword: string) => {
+        if (!user?.id) {
+            throw new Error('User not authenticated');
+        }
         setIsLoading(true);
         setError(null);
         try {
-            await resetPassword(email);
+            await apiChangePassword(user.id, currentPassword, newPassword);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Password reset failed';
+            const errorMessage = err instanceof Error ? err.message : 'Password change failed';
             setError(errorMessage);
             throw err;
         } finally {
@@ -126,10 +152,29 @@ export const useAuth = () => {
         }
     };
 
+    /**
+     * Update user in store and localStorage
+     */
+    const updateUser = (updatedUser: User) => {
+        setUser(updatedUser);
+        updateStoredUser({
+            id: updatedUser.id,
+            userName: updatedUser.userName,
+            email: updatedUser.email,
+            phoneNumber: updatedUser.phoneNumber,
+            country: updatedUser.country,
+            imageUrl: updatedUser.imageUrl,
+            status: updatedUser.status,
+            createdAt: typeof updatedUser.createdAt === 'string'
+                ? updatedUser.createdAt
+                : updatedUser.createdAt.toISOString(),
+            favouriteCompanies: updatedUser.favouriteCompanies,
+        });
+    };
+
     return {
         // State
         user,
-        firebaseUser,
         isAuthenticated,
         isAuthLoading,
         isLoading,
@@ -140,7 +185,8 @@ export const useAuth = () => {
         register,
         loginWithGoogle,
         logout,
-        sendPasswordReset,
+        changeUserPassword,
+        updateUser,
         clearError: () => setError(null),
     };
 };

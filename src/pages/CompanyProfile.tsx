@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { signOut } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -9,6 +9,7 @@ export const CompanyProfile: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { company } = useAuthStore();
+  const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState<'info' | 'notifications'>('info');
 
@@ -23,7 +24,7 @@ export const CompanyProfile: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);

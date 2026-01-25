@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { signOut } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { fetchCompaniesByIds } from '@/services/companyService';
 import { fetchCommentsByAuthorId } from '@/services/commentService';
-import { fetchRewardsByUserId } from '@/services/rewardService';
-import { fetchNotificationsByUserId, markNotificationAsRead } from '@/services/notificationService';
+import {
+  fetchRewardsByUserId,
+  fetchNotificationsByUserId,
+  markNotificationAsRead,
+} from '@/services/userService';
 import { Company, Comment, Reward, Noti } from '@/types';
 
 export const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, firebaseUser } = useAuthStore();
+  const { user } = useAuthStore();
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'info' | 'favorites' | 'comments' | 'notifications' | 'rewards'>('info');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isProfileExpanded, setIsProfileExpanded] = useState(true);
@@ -41,7 +45,8 @@ export const UserProfile: React.FC = () => {
       if (activeTab === 'favorites' && user?.favouriteCompanies && user.favouriteCompanies.length > 0) {
         setIsLoadingFavorites(true);
         try {
-          const companies = await fetchCompaniesByIds(user.favouriteCompanies);
+          const companyIds = user.favouriteCompanies.map(fc => fc.id);
+          const companies = await fetchCompaniesByIds(companyIds);
           setFavoriteCompanies(companies);
         } catch (error) {
           console.error('Error loading favorite companies:', error);
@@ -144,7 +149,7 @@ export const UserProfile: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -325,7 +330,7 @@ export const UserProfile: React.FC = () => {
                         fontSize: '14px',
                         color: '#4C38A5',
                       }}>
-                        {firebaseUser?.email || 'email@email.com'}
+                        {user?.email || 'email@email.com'}
                       </span>
                       <button style={{
                         fontFamily: 'Metropolis, sans-serif',

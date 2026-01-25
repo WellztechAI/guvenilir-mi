@@ -1,166 +1,283 @@
-import { doc, getDoc, setDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { User, UserFirestore, userFromFirestore, userToFirestore } from '@/types';
+import { api } from '@/lib/api';
+import { User, Noti, Reward } from '@/types';
 
-const USERS_COLLECTION = 'users';
+// ============================================
+// API Response Types
+// ============================================
 
-/**
- * Fetches a user by their UID from Firestore
- */
-export const fetchUser = async (uid: string): Promise<User | null> => {
-    try {
-        const userRef = doc(db, USERS_COLLECTION, uid);
-        const userSnap = await getDoc(userRef);
+interface ApiUser {
+    id: string;
+    user_name: string;
+    email: string;
+    phone_number?: string;
+    country?: string;
+    image_url?: string;
+    status: string;
+    created_at: string;
+}
 
-        if (!userSnap.exists()) {
-            console.log('No user found with UID:', uid);
-            return null;
-        }
+interface ApiNotification {
+    id: string;
+    user_id: string;
+    text: string;
+    type: string;
+    is_read: boolean;
+    created_at: string;
+}
 
-        const userData = userSnap.data() as UserFirestore;
-        return userFromFirestore(userData);
-    } catch (error) {
-        console.error('Error fetching user:', error);
-        throw error;
-    }
-};
+interface ApiReward {
+    id: string;
+    user_id: string;
+    text: string;
+    code: string;
+    is_used: boolean;
+    created_at: string;
+}
 
-/**
- * Creates a new user in Firestore
- */
-export const createUser = async (user: User): Promise<void> => {
-    try {
-        console.log('Attempting to create user in Firestore:', user.id);
-        console.log('Firestore db instance:', db);
-
-        if (!db) {
-            throw new Error('Firestore database instance is not initialized');
-        }
-
-        const userRef = doc(db, USERS_COLLECTION, user.id);
-        console.log('User ref created for collection:', USERS_COLLECTION);
-
-        const firestoreUser = userToFirestore(user);
-        console.log('User data to save:', JSON.stringify(firestoreUser, null, 2));
-
-        await setDoc(userRef, firestoreUser);
-        console.log('User created successfully in Firestore:', user.id);
-    } catch (error) {
-        console.error('Error creating user in Firestore:', error);
-        console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
-        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
-        console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-        throw error;
-    }
-};
-
-/**
- * Updates an existing user in Firestore
- */
-export const updateUser = async (uid: string, updates: Partial<User>): Promise<void> => {
-    try {
-        const userRef = doc(db, USERS_COLLECTION, uid);
-
-        // Convert Date fields to Timestamp if present
-        const firestoreUpdates: Record<string, unknown> = { ...updates };
-        if (updates.createdAt) {
-            firestoreUpdates.createdAt = Timestamp.fromDate(updates.createdAt);
-        }
-
-        await updateDoc(userRef, firestoreUpdates);
-        console.log('User updated successfully:', uid);
-    } catch (error) {
-        console.error('Error updating user:', error);
-        throw error;
-    }
-};
-
-/**
- * Creates a new user object with default values
- */
-export const createDefaultUser = (
-    uid: string,
-    email: string,
-    displayName?: string | null,
-    phoneNumber?: string | null
-): User => {
-    return {
-        id: uid,
-        userName: displayName || email.split('@')[0],
-        email: email,
-        phoneNumber: phoneNumber || undefined,
-        favouriteCompanies: [],
-        createdAt: new Date(),
-        country: undefined,
-        imageUrl: undefined,
-        status: 'active',
+interface NotificationsResponse {
+    data: ApiNotification[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
     };
-};
+}
 
-export const fetchOrCreateUser = async (
-    uid: string,
-    email: string,
-    displayName?: string | null,
-    phoneNumber?: string | null
-): Promise<User> => {
-    let user = await fetchUser(uid);
+interface RewardsResponse {
+    data: ApiReward[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
+    };
+}
 
-    if (!user) {
-        // Create new user
-        console.log('User not found, creating new user:', uid);
-        user = createDefaultUser(uid, email, displayName, phoneNumber);
-        await createUser(user);
-    } else {
-        // User exists, check if we need to update any info to keep sync with Auth
-        const updates: Partial<User> = {};
-        let hasUpdates = false;
+interface UsersResponse {
+    data: ApiUser[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
+    };
+}
 
-        // Update email if changed
-        if (email && user.email !== email) {
-            updates.email = email;
-            hasUpdates = true;
-        }
+// ============================================
+// Helper: Convert API response to types
+// ============================================
 
-        // Update display name if changed and provided
-        // Note: Firestore field is 'userName', Auth field is 'displayName'
-        if (displayName && user.userName !== displayName) {
-            updates.userName = displayName;
-            hasUpdates = true;
-        }
+const apiNotificationToNoti = (apiNoti: ApiNotification): Noti => ({
+    id: apiNoti.id,
+    date: new Date(apiNoti.created_at),
+    text: apiNoti.text,
+    isRead: apiNoti.is_read,
+    type: apiNoti.type,
+});
 
-        // Update phone number if provided and different (or missing)
-        if (phoneNumber && user.phoneNumber !== phoneNumber) {
-            updates.phoneNumber = phoneNumber;
-            hasUpdates = true;
-        }
+const apiRewardToReward = (apiReward: ApiReward): Reward => ({
+    id: apiReward.id,
+    date: new Date(apiReward.created_at),
+    text: apiReward.text,
+    code: apiReward.code,
+    isUsed: apiReward.is_used,
+});
 
-        if (hasUpdates) {
-            console.log('Syncing user data from Auth/Store to Firestore:', updates);
-            await updateUser(uid, updates);
-            // Update local user object to return the most recent data
-            user = { ...user, ...updates };
-        }
+const apiUserToUser = (apiUser: ApiUser): User => ({
+    id: apiUser.id,
+    userName: apiUser.user_name,
+    email: apiUser.email,
+    phoneNumber: apiUser.phone_number,
+    country: apiUser.country,
+    imageUrl: apiUser.image_url,
+    status: apiUser.status,
+    createdAt: new Date(apiUser.created_at),
+    favouriteCompanies: [],
+});
+
+// ============================================
+// User Profile Operations
+// ============================================
+
+/**
+ * Updates user profile
+ * PUT /api/users/:userId
+ */
+export const updateUserProfile = async (
+    userId: string,
+    updates: {
+        userName?: string;
+        phoneNumber?: string;
+        country?: string;
+        imageUrl?: string;
+        status?: string;
     }
-
-    return user;
+): Promise<void> => {
+    try {
+        await api.put(`/api/users/${userId}`, updates);
+        console.log('User profile updated:', userId);
+    } catch (error) {
+        console.error('Error updating user profile:', error);
+        throw error;
+    }
 };
 
 /**
- * Fetches all users from Firestore
+ * Updates user avatar
+ * PUT /api/users/:userId
  */
-export const fetchAllUsers = async (): Promise<User[]> => {
-    try {
-        const { collection, getDocs } = await import('firebase/firestore');
-        const usersRef = collection(db, USERS_COLLECTION);
-        const querySnapshot = await getDocs(usersRef);
+export const updateUserAvatar = async (userId: string, imageUrl: string): Promise<void> => {
+    return updateUserProfile(userId, { imageUrl });
+};
 
-        return querySnapshot.docs.map(doc => {
-            const userData = doc.data() as UserFirestore;
-            return userFromFirestore(userData);
-        });
+// ============================================
+// Notification Operations
+// ============================================
+
+/**
+ * Fetches user notifications
+ * GET /api/users/:userId/notifications
+ */
+export const fetchNotificationsByUserId = async (
+    userId: string,
+    options?: {
+        unreadOnly?: boolean;
+        limit?: number;
+        offset?: number;
+    }
+): Promise<Noti[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (options?.unreadOnly) params.append('unreadOnly', 'true');
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
+
+        const queryString = params.toString();
+        const url = `/api/users/${userId}/notifications${queryString ? `?${queryString}` : ''}`;
+
+        const response = await api.get<NotificationsResponse>(url);
+        return (response.data || []).map(apiNotificationToNoti);
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return [];
+    }
+};
+
+/**
+ * Fetches unread notifications count
+ */
+export const fetchUnreadNotificationsCount = async (userId: string): Promise<number> => {
+    try {
+        const notifications = await fetchNotificationsByUserId(userId, { unreadOnly: true });
+        return notifications.length;
+    } catch (error) {
+        console.error('Error fetching unread notifications count:', error);
+        return 0;
+    }
+};
+
+/**
+ * Marks notifications as read
+ * PATCH /api/users/:userId/notifications/read
+ */
+export const markNotificationsAsRead = async (
+    userId: string,
+    notificationIds?: string[]
+): Promise<void> => {
+    try {
+        const body = notificationIds ? { notificationIds } : {};
+        await api.patch(`/api/users/${userId}/notifications/read`, body);
+        console.log('Notifications marked as read');
+    } catch (error) {
+        console.error('Error marking notifications as read:', error);
+        throw error;
+    }
+};
+
+/**
+ * Marks a single notification as read
+ */
+export const markNotificationAsRead = async (userId: string, notificationId: string): Promise<void> => {
+    return markNotificationsAsRead(userId, [notificationId]);
+};
+
+/**
+ * Marks all notifications as read
+ */
+export const markAllNotificationsAsRead = async (userId: string): Promise<void> => {
+    return markNotificationsAsRead(userId);
+};
+
+// ============================================
+// Reward Operations
+// ============================================
+
+/**
+ * Fetches user rewards
+ * GET /api/users/:userId/rewards
+ */
+export const fetchRewardsByUserId = async (
+    userId: string,
+    options?: {
+        unusedOnly?: boolean;
+        limit?: number;
+        offset?: number;
+    }
+): Promise<Reward[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (options?.unusedOnly) params.append('unusedOnly', 'true');
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
+
+        const queryString = params.toString();
+        const url = `/api/users/${userId}/rewards${queryString ? `?${queryString}` : ''}`;
+
+        const response = await api.get<RewardsResponse>(url);
+        return (response.data || []).map(apiRewardToReward);
+    } catch (error) {
+        console.error('Error fetching rewards:', error);
+        return [];
+    }
+};
+
+/**
+ * Fetches unused rewards
+ */
+export const fetchUnusedRewards = async (userId: string): Promise<Reward[]> => {
+    return fetchRewardsByUserId(userId, { unusedOnly: true });
+};
+
+// ============================================
+// Admin User Operations
+// ============================================
+
+/**
+ * Fetches all users (admin)
+ * GET /api/users
+ */
+export const fetchAllUsers = async (options?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+}): Promise<User[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (options?.status) params.append('status', options.status);
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
+
+        const queryString = params.toString();
+        const url = `/api/users${queryString ? `?${queryString}` : ''}`;
+
+        const response = await api.get<UsersResponse>(url);
+        return (response.data || []).map(apiUserToUser);
     } catch (error) {
         console.error('Error fetching all users:', error);
         throw error;
     }
 };
-

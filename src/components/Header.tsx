@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
-import { signOut } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
-  const { firebaseUser, user, company, userType } = useAuthStore();
+  const { user, company, userType, isAuthenticated } = useAuthStore();
+  const { logout } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // User is authenticated if we have either user or company data
-  const isAuthenticated = firebaseUser !== null;
+  // User has data loaded
   const hasUserData = user !== null || company !== null;
 
   // Get display name based on user type
@@ -23,7 +23,7 @@ export const Header: React.FC = () => {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await signOut();
+      await logout();
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);

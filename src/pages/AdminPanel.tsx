@@ -1,15 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAllCompanyVerifications, updateVerificationStatus } from '@/services/adminService';
-import { CompanyVerification } from '@/types';
+import {
+  fetchAllCompanyVerifications,
+  updateVerificationStatus,
+  fetchCommentsByStatus,
+  approveComment,
+  rejectComment,
+  deleteComment
+} from '@/services/adminService';
+import { CompanyVerification, Comment } from '@/types';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { Building2, MessageSquare, Gift, Star, Calendar, User } from 'lucide-react';
+
+type TabType = 'verifications' | 'comments';
 
 const AdminPanel = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('comments');
+
+  // Verification state
   const [verifications, setVerifications] = useState<CompanyVerification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingVerifications, setIsLoadingVerifications] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<CompanyVerification | null>(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  
+  const [isUpdatingVerification, setIsUpdatingVerification] = useState(false);
+
+  // Comments state
+  const [pendingComments, setPendingComments] = useState<Comment[]>([]);
+  const [approvedComments, setApprovedComments] = useState<Comment[]>([]);
+  const [rejectedComments, setRejectedComments] = useState<Comment[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(true);
+  const [selectedComment, setSelectedComment] = useState<Comment | null>(null);
+  const [isUpdatingComment, setIsUpdatingComment] = useState(false);
+
   // Coupon modal state
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [couponText, setCouponText] = useState('');
@@ -17,75 +38,156 @@ const AdminPanel = () => {
   const [isSendingCoupons, setIsSendingCoupons] = useState(false);
 
   useEffect(() => {
-    loadVerifications();
-  }, []);
+    if (activeTab === 'verifications') {
+      loadVerifications();
+    } else if (activeTab === 'comments') {
+      loadComments();
+    }
+  }, [activeTab]);
+
+  // ============================================
+  // Verification Functions
+  // ============================================
 
   const loadVerifications = async () => {
-    setIsLoading(true);
+    setIsLoadingVerifications(true);
     try {
-      const data = await fetchAllCompanyVerifications();
+      const data = await fetchAllCompanyVerifications('all');
       setVerifications(data);
     } catch (error) {
       console.error('Error loading verifications:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingVerifications(false);
     }
   };
 
-  const handleSendCouponsToAll = async () => {
-    if (!couponText || !couponCode) {
-      alert('Lütfen kupon bilgilerini doldurun');
-      return;
-    }
-
-    setIsSendingCoupons(true);
-    try {
-      // Import dynamically to avoid circular dependencies
-      const { fetchAllUsers } = await import('@/services/userService');
-      const { addRewardToUserDocument } = await import('@/services/rewardService');
-      
-      // Get all users
-      const users = await fetchAllUsers();
-      console.log(`Sending coupons to ${users.length} users...`);
-
-      // Send coupon to each user
-      for (const user of users) {
-        await addRewardToUserDocument(user.id, {
-          date: new Date(),
-          text: couponText,
-          code: couponCode,
-          isUsed: false,
-        });
-      }
-
-      alert(`✅ ${users.length} kullanıcıya kupon gönderildi!`);
-      setShowCouponModal(false);
-      setCouponText('');
-      setCouponCode('');
-    } catch (error) {
-      console.error('Error sending coupons:', error);
-      alert('Kupon gönderilirken hata oluştu');
-    } finally {
-      setIsSendingCoupons(false);
-    }
-  };
-
-  const handleStatusUpdate = async (id: string, status: 'approved' | 'rejected') => {
-    setIsUpdating(true);
+  const handleVerificationStatusUpdate = async (id: string, status: 'approved' | 'rejected') => {
+    setIsUpdatingVerification(true);
     try {
       await updateVerificationStatus(id, status);
-      // Reload verifications after update
       await loadVerifications();
       setSelectedVerification(null);
     } catch (error) {
       console.error('Error updating status:', error);
       alert('Durum güncellenirken bir hata oluştu');
     } finally {
-      setIsUpdating(false);
+      setIsUpdatingVerification(false);
     }
   };
 
-  // Convert English status to Turkish
+  // ============================================
+  // Comment Functions
+  // ============================================
+
+  const loadComments = async () => {
+    setIsLoadingComments(true);
+    try {
+      const [pending, approved, rejected] = await Promise.all([
+        fetchCommentsByStatus('pending'),
+        fetchCommentsByStatus('approved', 20),
+        fetchCommentsByStatus('rejected', 20),
+      ]);
+      setPendingComments(pending);
+      setApprovedComments(approved);
+      setRejectedComments(rejected);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
+  const handleApproveComment = async (commentId: string) => {
+    setIsUpdatingComment(true);
+    try {
+      await approveComment(commentId);
+      await loadComments();
+      setSelectedComment(null);
+    } catch (error) {
+      console.error('Error approving comment:', error);
+      alert('Yorum onaylanırken bir hata oluştu');
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  const handleRejectComment = async (commentId: string) => {
+    setIsUpdatingComment(true);
+    try {
+      await rejectComment(commentId);
+      await loadComments();
+      setSelectedComment(null);
+    } catch (error) {
+      console.error('Error rejecting comment:', error);
+      alert('Yorum reddedilirken bir hata oluştu');
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Bu yorumu silmek istediğinizden emin misiniz?')) return;
+
+    setIsUpdatingComment(true);
+    try {
+      await deleteComment(commentId);
+      await loadComments();
+      setSelectedComment(null);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      alert('Yorum silinirken bir hata oluştu');
+    } finally {
+      setIsUpdatingComment(false);
+    }
+  };
+
+  // ============================================
+  // Coupon Functions
+  // ============================================
+
+  // TODO: Re-enable when userService and rewardService are implemented
+  // const handleSendCouponsToAll = async () => {
+  //   if (!couponText || !couponCode) {
+  //     alert('Lütfen kupon bilgilerini doldurun');
+  //     return;
+  //   }
+
+  //   setIsSendingCoupons(true);
+  //   try {
+  //     const { fetchAllUsers } = await import('@/services/userService');
+  //     const { addRewardToUserDocument } = await import('@/services/rewardService');
+
+  //     const users = await fetchAllUsers();
+  //     console.log(`Sending coupons to ${users.length} users...`);
+
+  //     for (const user of users) {
+  //       await addRewardToUserDocument(user.id, {
+  //         date: new Date(),
+  //         text: couponText,
+  //         code: couponCode,
+  //         isUsed: false,
+  //       });
+  //     }
+
+  //     alert(`✅ ${users.length} kullanıcıya kupon gönderildi!`);
+  //     setShowCouponModal(false);
+  //     setCouponText('');
+  //     setCouponCode('');
+  //   } catch (error) {
+  //     console.error('Error sending coupons:', error);
+  //     alert('Kupon gönderilirken hata oluştu');
+  //   } finally {
+  //     setIsSendingCoupons(false);
+  //   }
+  // };
+  const handleSendCouponsToAll = async () => {
+    alert('Bu özellik henüz aktif değil');
+  };
+
+  // ============================================
+  // Helper Functions
+  // ============================================
+
   const getStatusText = (status: string) => {
     const lowerStatus = status?.toLowerCase();
     switch (lowerStatus) {
@@ -95,6 +197,8 @@ const AdminPanel = () => {
         return 'Reddedildi';
       case 'pending':
         return 'Beklemede';
+      case 'deleted':
+        return 'Silindi';
       default:
         return status;
     }
@@ -109,15 +213,33 @@ const AdminPanel = () => {
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'deleted':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
-  // Filter verifications by status (case-insensitive)
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return '-';
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Filter verifications by status
   const pendingVerifications = verifications.filter(v => v.status?.toLowerCase() === 'pending');
   const approvedVerifications = verifications.filter(v => v.status?.toLowerCase() === 'approved');
   const rejectedVerifications = verifications.filter(v => v.status?.toLowerCase() === 'rejected');
+
+  // ============================================
+  // Render Functions
+  // ============================================
 
   const renderVerificationCard = (verification: CompanyVerification) => (
     <div
@@ -144,13 +266,13 @@ const AdminPanel = () => {
             <span className="font-medium">Panel Kullanıcı Adı:</span> {verification.panelUserName}
           </p>
         </div>
-        
+
         <div className="flex flex-col items-end gap-2">
           <span className={`px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(verification.status)}`}>
             {getStatusText(verification.status)}
           </span>
           <span className="text-sm text-gray-500">
-            {new Date(verification.createdAt).toLocaleDateString('tr-TR')}
+            {formatDate(verification.createdAt)}
           </span>
         </div>
       </div>
@@ -166,6 +288,83 @@ const AdminPanel = () => {
     </div>
   );
 
+  const renderCommentCard = (comment: Comment) => (
+    <div
+      key={comment.id}
+      className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition"
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold">
+            {comment.authorName?.substring(0, 2).toUpperCase() || 'AN'}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-[#202023]">
+                {comment.authorName}
+              </h3>
+              <div className="flex">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={14}
+                    className={star <= comment.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                  />
+                ))}
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">
+              {comment.companyName} • {formatDate(comment.date)}
+            </p>
+          </div>
+        </div>
+
+        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(comment.status)}`}>
+          {getStatusText(comment.status)}
+        </span>
+      </div>
+
+      <p className="text-gray-700 mb-4 line-clamp-3">
+        {comment.message}
+      </p>
+
+      {comment.productName && (
+        <p className="text-sm text-gray-500 mb-2">
+          <span className="font-medium">Ürün:</span> {comment.productName}
+        </p>
+      )}
+
+      <div className="flex gap-2 pt-4 border-t border-gray-200">
+        <button
+          onClick={() => setSelectedComment(comment)}
+          className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+        >
+          Detayları Görüntüle
+        </button>
+        {comment.status === 'pending' && (
+          <>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => handleApproveComment(comment.id)}
+              disabled={isUpdatingComment}
+              className="text-green-600 hover:text-green-700 font-medium text-sm disabled:opacity-50"
+            >
+              Onayla
+            </button>
+            <span className="text-gray-300">|</span>
+            <button
+              onClick={() => handleRejectComment(comment.id)}
+              disabled={isUpdatingComment}
+              className="text-red-600 hover:text-red-700 font-medium text-sm disabled:opacity-50"
+            >
+              Reddet
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white flex flex-col overflow-hidden items-center pb-24 rounded-[32px] min-h-screen">
       <Header />
@@ -177,96 +376,334 @@ const AdminPanel = () => {
               Admin Paneli
             </h1>
             <p className="text-gray-600">
-              İşletme başvurularını yönetin
+              Yorumları ve işletme başvurularını yönetin
             </p>
           </div>
-          
+
           <button
             onClick={() => setShowCouponModal(true)}
-            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition"
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition flex items-center gap-2"
           >
+            <Gift size={20} />
             Kupon Gönder
           </button>
         </div>
 
-        {isLoading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-            <p className="mt-4 text-gray-600">Başvurular yükleniyor...</p>
-          </div>
-        ) : verifications.length === 0 ? (
-          <div className="bg-gray-50 rounded-lg p-12 text-center">
-            <p className="text-gray-600 text-lg">Henüz başvuru bulunmuyor</p>
-          </div>
-        ) : (
-          <div className="space-y-12">
-            {/* Pending Section */}
-            <section>
-              <div className="flex items-center mb-6">
-                <h2 className="text-2xl font-bold text-[#202023]">
-                  Bekleyenler
-                </h2>
-                <span className="ml-3 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
-                  {pendingVerifications.length}
-                </span>
-              </div>
-              {pendingVerifications.length === 0 ? (
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <p className="text-gray-500">Bekleyen başvuru yok</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6">
-                  {pendingVerifications.map(renderVerificationCard)}
-                </div>
-              )}
-            </section>
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('comments')}
+            className={`flex items-center gap-2 px-6 py-4 font-semibold text-lg transition-colors relative ${activeTab === 'comments'
+              ? 'text-purple-600 border-b-2 border-purple-600 -mb-[2px]'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <MessageSquare size={22} />
+            Yorum Moderasyonu
+            {pendingComments.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                {pendingComments.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('verifications')}
+            className={`flex items-center gap-2 px-6 py-4 font-semibold text-lg transition-colors relative ${activeTab === 'verifications'
+              ? 'text-purple-600 border-b-2 border-purple-600 -mb-[2px]'
+              : 'text-gray-500 hover:text-gray-700'
+              }`}
+          >
+            <Building2 size={22} />
+            İşletme Başvuruları
+            {pendingVerifications.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                {pendingVerifications.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-            {/* Approved Section */}
-            <section>
-              <div className="flex items-center mb-6">
-                <h2 className="text-2xl font-bold text-[#202023]">
-                  Kabul Edilenler
-                </h2>
-                <span className="ml-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                  {approvedVerifications.length}
-                </span>
+        {/* Comments Tab Content */}
+        {activeTab === 'comments' && (
+          <>
+            {isLoadingComments ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                <p className="mt-4 text-gray-600">Yorumlar yükleniyor...</p>
               </div>
-              {approvedVerifications.length === 0 ? (
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <p className="text-gray-500">Kabul edilen başvuru yok</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6">
-                  {approvedVerifications.map(renderVerificationCard)}
-                </div>
-              )}
-            </section>
+            ) : (
+              <div className="space-y-12">
+                {/* Pending Comments */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Onay Bekleyen Yorumlar
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                      {pendingComments.length}
+                    </span>
+                  </div>
+                  {pendingComments.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Onay bekleyen yorum yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {pendingComments.map(renderCommentCard)}
+                    </div>
+                  )}
+                </section>
 
-            {/* Rejected Section */}
-            <section>
-              <div className="flex items-center mb-6">
-                <h2 className="text-2xl font-bold text-[#202023]">
-                  Reddedilenler
-                </h2>
-                <span className="ml-3 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold">
-                  {rejectedVerifications.length}
-                </span>
+                {/* Approved Comments */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Onaylanan Yorumlar
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                      {approvedComments.length}
+                    </span>
+                  </div>
+                  {approvedComments.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Onaylanan yorum yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {approvedComments.slice(0, 6).map(renderCommentCard)}
+                    </div>
+                  )}
+                </section>
+
+                {/* Rejected Comments */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Reddedilen Yorumlar
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold">
+                      {rejectedComments.length}
+                    </span>
+                  </div>
+                  {rejectedComments.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Reddedilen yorum yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {rejectedComments.slice(0, 6).map(renderCommentCard)}
+                    </div>
+                  )}
+                </section>
               </div>
-              {rejectedVerifications.length === 0 ? (
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <p className="text-gray-500">Reddedilen başvuru yok</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6">
-                  {rejectedVerifications.map(renderVerificationCard)}
-                </div>
-              )}
-            </section>
-          </div>
+            )}
+          </>
+        )}
+
+        {/* Verifications Tab Content */}
+        {activeTab === 'verifications' && (
+          <>
+            {isLoadingVerifications ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+                <p className="mt-4 text-gray-600">Başvurular yükleniyor...</p>
+              </div>
+            ) : verifications.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg p-12 text-center">
+                <p className="text-gray-600 text-lg">Henüz başvuru bulunmuyor</p>
+              </div>
+            ) : (
+              <div className="space-y-12">
+                {/* Pending Section */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Bekleyenler
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                      {pendingVerifications.length}
+                    </span>
+                  </div>
+                  {pendingVerifications.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Bekleyen başvuru yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {pendingVerifications.map(renderVerificationCard)}
+                    </div>
+                  )}
+                </section>
+
+                {/* Approved Section */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Kabul Edilenler
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                      {approvedVerifications.length}
+                    </span>
+                  </div>
+                  {approvedVerifications.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Kabul edilen başvuru yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {approvedVerifications.map(renderVerificationCard)}
+                    </div>
+                  )}
+                </section>
+
+                {/* Rejected Section */}
+                <section>
+                  <div className="flex items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[#202023]">
+                      Reddedilenler
+                    </h2>
+                    <span className="ml-3 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-semibold">
+                      {rejectedVerifications.length}
+                    </span>
+                  </div>
+                  {rejectedVerifications.length === 0 ? (
+                    <div className="bg-gray-50 rounded-lg p-8 text-center">
+                      <p className="text-gray-500">Reddedilen başvuru yok</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6">
+                      {rejectedVerifications.map(renderVerificationCard)}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
+          </>
         )}
       </main>
 
-      {/* Detail Modal */}
+      {/* Comment Detail Modal */}
+      {selectedComment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
+            <div className="flex justify-between items-start mb-6">
+              <h2 className="text-2xl font-bold text-[#202023]">
+                Yorum Detayları
+              </h2>
+              <button
+                onClick={() => setSelectedComment(null)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold text-xl">
+                  {selectedComment.authorName?.substring(0, 2).toUpperCase() || 'AN'}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold">{selectedComment.authorName}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={18}
+                          className={star <= selectedComment.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-gray-500">({selectedComment.rating}/5)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    <Building2 size={14} className="inline mr-1" />
+                    Şirket
+                  </label>
+                  <p className="text-gray-900">{selectedComment.companyName}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    <Calendar size={14} className="inline mr-1" />
+                    Tarih
+                  </label>
+                  <p className="text-gray-900">{formatDate(selectedComment.date)}</p>
+                </div>
+              </div>
+
+              {selectedComment.productName && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Ürün/Hizmet
+                  </label>
+                  <p className="text-gray-900">{selectedComment.productName}</p>
+                </div>
+              )}
+
+              {selectedComment.contactMethod && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    İletişim Yöntemi
+                  </label>
+                  <p className="text-gray-900 capitalize">{selectedComment.contactMethod}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Yorum
+                </label>
+                <p className="text-gray-900 bg-gray-50 rounded-lg p-4">{selectedComment.message}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">
+                  Durum
+                </label>
+                <span className={`inline-block px-4 py-2 rounded-full text-sm font-semibold border ${getStatusColor(selectedComment.status)}`}>
+                  {getStatusText(selectedComment.status)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-6 border-t border-gray-200">
+              {selectedComment.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => handleApproveComment(selectedComment.id)}
+                    disabled={isUpdatingComment}
+                    className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingComment ? 'İşleniyor...' : 'Onayla'}
+                  </button>
+                  <button
+                    onClick={() => handleRejectComment(selectedComment.id)}
+                    disabled={isUpdatingComment}
+                    className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdatingComment ? 'İşleniyor...' : 'Reddet'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => handleDeleteComment(selectedComment.id)}
+                disabled={isUpdatingComment}
+                className="py-3 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Verification Detail Modal */}
       {selectedVerification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8">
@@ -376,25 +813,25 @@ const AdminPanel = () => {
                   Başvuru Tarihi
                 </label>
                 <p className="text-gray-900">
-                  {new Date(selectedVerification.createdAt).toLocaleString('tr-TR')}
+                  {formatDate(selectedVerification.createdAt)}
                 </p>
               </div>
             </div>
 
             <div className="flex gap-4 pt-6 border-t border-gray-200">
               <button
-                onClick={() => handleStatusUpdate(selectedVerification.id, 'approved')}
-                disabled={isUpdating || selectedVerification.status === 'Approved'}
+                onClick={() => handleVerificationStatusUpdate(selectedVerification.id, 'approved')}
+                disabled={isUpdatingVerification || selectedVerification.status?.toLowerCase() === 'approved'}
                 className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isUpdating ? 'Güncelleniyor...' : 'Kabul Et'}
+                {isUpdatingVerification ? 'Güncelleniyor...' : 'Kabul Et'}
               </button>
               <button
-                onClick={() => handleStatusUpdate(selectedVerification.id, 'rejected')}
-                disabled={isUpdating || selectedVerification.status === 'Rejected'}
+                onClick={() => handleVerificationStatusUpdate(selectedVerification.id, 'rejected')}
+                disabled={isUpdatingVerification || selectedVerification.status?.toLowerCase() === 'rejected'}
                 className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isUpdating ? 'Güncelleniyor...' : 'Reddet'}
+                {isUpdatingVerification ? 'Güncelleniyor...' : 'Reddet'}
               </button>
             </div>
           </div>

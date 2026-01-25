@@ -1,33 +1,134 @@
-import { collection, getDocs, updateDoc, doc, addDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { CompanyVerification } from '@/types';
-import { Timestamp } from 'firebase/firestore';
+import { api } from '@/lib/api';
+import { CompanyVerification, Comment } from '@/types';
 
-const COMPANY_VERIFICATION_COLLECTION = 'company_verifications';
-const COMPANIES_COLLECTION = 'companies';
+// ============================================
+// API Response Types
+// ============================================
 
-/**
- * Firestore type for CompanyVerification (with Timestamp for dates)
- */
-interface CompanyVerificationFirestore extends Omit<CompanyVerification, 'createdAt'> {
-    createdAt: Timestamp;
+interface ApiVerification {
+    id: string;
+    company_id: string;
+    requester_name: string;
+    requester_title: string;
+    requester_company_email: string;
+    requester_phone_number?: string;
+    panel_user_name: string;
+    mernis_no: string;
+    signature_urls: string[];
+    address: string;
+    city: string;
+    district: string;
+    postal_code: string;
+    membership: string;
+    status: string;
+    rejection_reason?: string;
+    created_at: string;
+    updated_at: string;
 }
 
-/**
- * Fetches all company verifications
- */
-export const fetchAllCompanyVerifications = async (): Promise<CompanyVerification[]> => {
-    try {
-        const querySnapshot = await getDocs(collection(db, COMPANY_VERIFICATION_COLLECTION));
+interface ApiComment {
+    id: string;
+    author_id: string;
+    author_name: string;
+    author_avatar?: string;
+    company_id: string;
+    company_name: string;
+    created_at: string;
+    rating: number;
+    status: string;
+    message: string;
+    answer?: string;
+    answer_date?: string;
+    likes_count: number;
+    product_name?: string;
+    contact_method?: string;
+}
 
-        return querySnapshot.docs.map(doc => {
-            const data = doc.data() as CompanyVerificationFirestore;
-            return {
-                ...data,
-                id: doc.id,
-                createdAt: data.createdAt.toDate(),
-            };
-        });
+interface VerificationsResponse {
+    data: ApiVerification[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
+    };
+}
+
+interface CommentsResponse {
+    data: ApiComment[];
+    pagination?: {
+        total: number;
+        limit: number;
+        offset: number;
+        page: number;
+        totalPages: number;
+    };
+}
+
+// ============================================
+// Helper: Convert API response to types
+// ============================================
+
+const apiVerificationToVerification = (apiVerification: ApiVerification): CompanyVerification => ({
+    id: apiVerification.id,
+    companyId: apiVerification.company_id,
+    requesterName: apiVerification.requester_name,
+    requesterTitle: apiVerification.requester_title,
+    requesterCompanyEmail: apiVerification.requester_company_email,
+    requesterPhoneNumber: apiVerification.requester_phone_number,
+    panelUserName: apiVerification.panel_user_name,
+    mernisNo: apiVerification.mernis_no,
+    signatureUrls: apiVerification.signature_urls || [],
+    address: apiVerification.address,
+    city: apiVerification.city,
+    district: apiVerification.district,
+    postalCode: apiVerification.postal_code,
+    membership: apiVerification.membership,
+    status: apiVerification.status,
+    rejectionReason: apiVerification.rejection_reason,
+    createdAt: new Date(apiVerification.created_at),
+});
+
+const apiCommentToComment = (apiComment: ApiComment): Comment => ({
+    id: apiComment.id,
+    authorId: apiComment.author_id,
+    authorName: apiComment.author_name || 'Anonim',
+    authorAvatar: apiComment.author_avatar,
+    companyId: apiComment.company_id,
+    companyName: apiComment.company_name || '',
+    date: apiComment.created_at ? new Date(apiComment.created_at) : new Date(),
+    rating: apiComment.rating || 0,
+    status: apiComment.status || 'pending',
+    message: apiComment.message || '',
+    answer: apiComment.answer,
+    answerDate: apiComment.answer_date ? new Date(apiComment.answer_date) : undefined,
+    likesCount: apiComment.likes_count || 0,
+    productName: apiComment.product_name,
+    contactMethod: apiComment.contact_method,
+});
+
+// ============================================
+// Company Verification Functions
+// ============================================
+
+/**
+ * Fetches all company verifications with optional status filter
+ */
+export const fetchAllCompanyVerifications = async (
+    status?: 'pending' | 'approved' | 'rejected' | 'all'
+): Promise<CompanyVerification[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (status && status !== 'all') {
+            params.append('status', status);
+        } else {
+            params.append('status', 'all');
+        }
+        params.append('limit', '100');
+
+        const response = await api.get<VerificationsResponse>(`/api/verifications?${params.toString()}`);
+        return (response.data || []).map(apiVerificationToVerification);
     } catch (error) {
         console.error('Error fetching all company verifications:', error);
         throw error;
@@ -35,66 +136,117 @@ export const fetchAllCompanyVerifications = async (): Promise<CompanyVerificatio
 };
 
 /**
- * Updates the status of a company verification
- * If approved, creates company in companies collection
+ * Approves a company verification
+ */
+export const approveVerification = async (verificationId: string): Promise<void> => {
+    try {
+        await api.post(`/api/verifications/${verificationId}/approve`);
+        console.log('✅ Verification approved:', verificationId);
+    } catch (error) {
+        console.error('Error approving verification:', error);
+        throw error;
+    }
+};
+
+/**
+ * Rejects a company verification
+ */
+export const rejectVerification = async (verificationId: string, reason?: string): Promise<void> => {
+    try {
+        await api.post(`/api/verifications/${verificationId}/reject`, { reason });
+        console.log('✅ Verification rejected:', verificationId);
+    } catch (error) {
+        console.error('Error rejecting verification:', error);
+        throw error;
+    }
+};
+
+/**
+ * Updates the status of a company verification (legacy - for backward compatibility)
  */
 export const updateVerificationStatus = async (
     id: string,
     status: 'approved' | 'rejected' | 'pending'
 ): Promise<void> => {
+    if (status === 'approved') {
+        await approveVerification(id);
+    } else if (status === 'rejected') {
+        await rejectVerification(id);
+    }
+};
+
+// ============================================
+// Comment Moderation Functions
+// ============================================
+
+/**
+ * Fetches all comments with optional status filter (for admin moderation)
+ */
+export const fetchAllPendingComments = async (): Promise<Comment[]> => {
     try {
-        // Update verification status
-        const docRef = doc(db, COMPANY_VERIFICATION_COLLECTION, id);
-        await updateDoc(docRef, { status });
-        console.log('✅ Status updated:', status);
-        
-        // Fetch verification data
-        const verifications = await fetchAllCompanyVerifications();
-        const verification = verifications.find(v => v.id === id);
-        
-        if (!verification) {
-            console.log('Verification not found');
-            return;
-        }
-        
-        // If approved, create company (if not exists) or activate it
-        if (status === 'approved') {
-            if (verification.companyId) {
-                // Company already exists, just activate it
-                const companyRef = doc(db, COMPANIES_COLLECTION, verification.companyId);
-                await updateDoc(companyRef, { status: 'active' });
-                console.log('✅ Company activated:', verification.companyId);
-            } else {
-                // Create new company
-                const companyData = {
-                    name: verification.requesterName,
-                    description: '',
-                    rating: null,
-                    commentCount: 0,
-                    phone: verification.requesterPhoneNumber || '',
-                    sectors: [],
-                    status: 'active',
-                };
-                
-                const companyRef = await addDoc(collection(db, COMPANIES_COLLECTION), companyData);
-                console.log('✅ Company created:', companyRef.id);
-                
-                // Save companyId to verification
-                await updateDoc(docRef, { companyId: companyRef.id });
-                console.log('✅ CompanyId saved to verification');
-            }
-        }
-        
-        // If rejected, deactivate company
-        if (status === 'rejected') {
-            if (verification.companyId) {
-                const companyRef = doc(db, COMPANIES_COLLECTION, verification.companyId);
-                await updateDoc(companyRef, { status: 'deactive' });
-                console.log('✅ Company deactivated:', verification.companyId);
-            }
-        }
+        const response = await api.get<CommentsResponse>('/api/admin/comments?status=pending&limit=100');
+        return (response.data || []).map(apiCommentToComment);
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('Error fetching pending comments:', error);
+        return [];
+    }
+};
+
+/**
+ * Fetches comments by status for admin moderation
+ */
+export const fetchCommentsByStatus = async (
+    status: 'pending' | 'approved' | 'rejected' | 'all',
+    limit: number = 50
+): Promise<Comment[]> => {
+    try {
+        const params = new URLSearchParams();
+        if (status !== 'all') {
+            params.append('status', status);
+        }
+        params.append('limit', limit.toString());
+
+        const response = await api.get<CommentsResponse>(`/api/admin/comments?${params.toString()}`);
+        return (response.data || []).map(apiCommentToComment);
+    } catch (error) {
+        console.error('Error fetching comments by status:', error);
+        return [];
+    }
+};
+
+/**
+ * Updates comment status (approve/reject)
+ */
+export const updateCommentStatus = async (
+    commentId: string,
+    status: 'pending' | 'approved' | 'rejected' | 'deleted'
+): Promise<void> => {
+    try {
+        await api.patch(`/api/comments/${commentId}/status`, { status });
+        console.log('✅ Comment status updated:', commentId, status);
+    } catch (error) {
+        console.error('Error updating comment status:', error);
         throw error;
     }
+};
+
+/**
+ * Approves a comment
+ */
+export const approveComment = async (commentId: string): Promise<void> => {
+    await updateCommentStatus(commentId, 'approved');
+};
+
+/**
+ * Rejects a comment
+ */
+export const rejectComment = async (commentId: string): Promise<void> => {
+    await updateCommentStatus(commentId, 'rejected');
+};
+
+/**
+ * Deletes a comment (soft delete)
+ */
+export const deleteComment = async (commentId: string): Promise<void> => {
+    await updateCommentStatus(commentId, 'deleted');
 };

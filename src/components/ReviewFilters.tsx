@@ -1,16 +1,34 @@
-import React, { useState } from "react";
+import React from "react";
 
-export const ReviewFilters: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRating, setSelectedRating] = useState("1");
+interface ReviewFiltersProps {
+  searchTerm: string;
+  selectedRating: string;
+  onSearchChange: (value: string) => void;
+  onRatingChange: (value: string) => void;
+  onSearchSubmit?: () => void;
+}
 
+export const ReviewFilters: React.FC<ReviewFiltersProps> = ({
+  searchTerm,
+  selectedRating,
+  onSearchChange,
+  onRatingChange,
+  onSearchSubmit,
+}) => {
   const ratingOptions = [
+    { value: "", label: "Tümü" },
     { value: "1", label: "1-Çok Kötü" },
     { value: "2", label: "2-Kötü" },
     { value: "3", label: "3-İdare Eder" },
     { value: "4", label: "4-İyi" },
     { value: "5", label: "5-Harika" },
   ];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && onSearchSubmit) {
+      onSearchSubmit();
+    }
+  };
 
   return (
     <div className="w-full">
@@ -27,7 +45,8 @@ export const ReviewFilters: React.FC = () => {
           <input
             type="search"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Bir kelime arayın..."
             className="grow shrink basis-auto bg-transparent outline-none"
             aria-label="Search reviews"
@@ -38,32 +57,26 @@ export const ReviewFilters: React.FC = () => {
             Puanlamaya göre sıralama
           </h3>
           <p className="text-[#1F2026] text-xs font-medium leading-loose tracking-[-0.48px] mb-2">
-            Lütfen 1-5 arası bir puan seçin
+            Lütfen bir puan seçin veya tümünü görüntüleyin
           </p>
-          <div className="flex w-full items-center justify-between gap-4 text-sm text-[#99B2C6] font-normal leading-none mt-1.5">
-            {/* Rating Buttons - Left */}
-            <div className="flex items-center flex-nowrap">
-              {ratingOptions.map((option, index) => (
-                <button
-                  key={option.value}
-                  onClick={() => setSelectedRating(option.value)}
-                  className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] ${
-                    selectedRating === option.value
-                      ? "text-[#17181A] bg-white"
-                      : "text-[#99B2C6] bg-[#F1F5F7]"
-                  } ${
-                    index === 0 ? "rounded-[8px_0_0_8px]" : ""
-                  } ${
-                     index === ratingOptions.length - 1 ? "rounded-[0_8px_8px_0]" : "border-r-0 last:border-r"
-                  } hover:bg-white hover:text-[#17181A] transition-colors whitespace-nowrap`}
-                  style={{borderRightWidth: index === ratingOptions.length - 1 ? '1px' : '0px'}}
-                >
-                  <span className="self-stretch my-auto">{option.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Sort Buttons Removed */}
+          <div className="flex w-full items-center gap-1 text-sm text-[#99B2C6] font-normal leading-none mt-1.5 flex-wrap">
+            {ratingOptions.map((option, index) => (
+              <button
+                key={option.value}
+                onClick={() => onRatingChange(option.value)}
+                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] ${
+                  selectedRating === option.value
+                    ? "text-[#17181A] bg-white"
+                    : "text-[#99B2C6] bg-[#F1F5F7]"
+                } ${
+                  index === 0 ? "rounded-[8px_0_0_8px]" : ""
+                } ${
+                  index === ratingOptions.length - 1 ? "rounded-[0_8px_8px_0]" : "border-r-0"
+                } hover:bg-white hover:text-[#17181A] transition-colors whitespace-nowrap`}
+              >
+                <span className="self-stretch my-auto">{option.label}</span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

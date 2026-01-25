@@ -1,18 +1,36 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { BrandHero } from "@/components/BrandHero";
 import { ReviewCard } from "@/components/ReviewCard";
 import { ReviewFilters } from "@/components/ReviewFilters";
+import { ReviewItem } from "@/components/ReviewItem";
 import { Pagination } from "@/components/Pagination";
 import { Footer } from "@/components/Footer";
-import { fetchCompany } from "@/services/companyService";
-import { fetchCommentsByCompanyId } from "@/services/commentService";
+import { fetchCompany, fetchCompanyBySlug } from "@/services/companyService";
+import { fetchCommentsByCompanyIdPaginated, createComment, likeComment, PaginationInfo } from "@/services/commentService";
 import { useAuthStore } from "@/store/authStore";
 import { Company, Comment } from "@/types";
 
+// Helper to check if a string is a UUID
+const isUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+// Contact method options
+const CONTACT_METHODS = [
+  { value: "phone", label: "Telefon" },
+  { value: "email", label: "E-posta" },
+  { value: "website", label: "Web Sitesi" },
+  { value: "in_person", label: "Yüz Yüze" },
+  { value: "social_media", label: "Sosyal Medya" },
+];
+
+
+
 const CompanyDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: companyIdentifier } = useParams<{ id: string }>();
   const { user } = useAuthStore();
   const [company, setCompany] = useState<Company | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -21,61 +39,214 @@ const CompanyDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch company and comments
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRating, setSelectedRating] = useState("");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [paginationInfo, setPaginationInfo] = useState<PaginationInfo>({
+    total: 0,
+    limit: 10,
+    offset: 0,
+    page: 1,
+    totalPages: 0,
+  });
+  const ITEMS_PER_PAGE = 10;
+
+  // Comment form states
+  const [showCommentForm, setShowCommentForm] = useState(false);
+  const [newCommentRating, setNewCommentRating] = useState(5);
+  const [newCommentMessage, setNewCommentMessage] = useState("");
+  const [newCommentProductName, setNewCommentProductName] = useState("");
+  const [newCommentContactMethod, setNewCommentContactMethod] = useState("website");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch company data
   useEffect(() => {
-    const loadData = async () => {
-      if (!id) {
-        setError("Şirket ID bulunamadı");
+    const loadCompany = async () => {
+      if (!companyIdentifier) {
+        setError("Şirket bulunamadı");
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-        const [companyData, commentsData] = await Promise.all([
-          fetchCompany(id),
-          fetchCommentsByCompanyId(id),
-        ]);
+        const companyData = isUUID(companyIdentifier)
+          ? await fetchCompany(companyIdentifier)
+          : await fetchCompanyBySlug(companyIdentifier);
 
         if (!companyData) {
           setError("Şirket bulunamadı");
-        } else {
-          setCompany(companyData);
-          setComments(commentsData);
-
-          if (user) {
-            const myReview = commentsData.find((c) => c.authorId === user.id);
-            setMyComment(myReview);
-            setOtherComments(
-              commentsData.filter(
-                (c) => c.id !== myReview?.id && c.status === "approved",
-              ),
-            );
-          } else {
-            setMyComment(undefined);
-            setOtherComments(
-              commentsData.filter((c) => c.status === "approved"),
-            );
-          }
+          setIsLoading(false);
+          return;
         }
+
+        setCompany(companyData);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Veriler yüklenirken bir hata oluştu");
+        console.error("Error fetching company:", err);
+        setError("Şirket bilgileri yüklenirken bir hata oluştu");
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadData();
-  }, [id, user]);
+    loadCompany();
+  }, [companyIdentifier]);
+
+  // Fetch comments with filters and pagination
+  const fetchComments = useCallback(async (page: number = currentPage) => {
+    if (!company?.id) return;
+
+    try {
+      setIsFiltering(true);
+      const result = await fetchCommentsByCompanyIdPaginated(company.id, {
+        status: "approved",
+        rating: selectedRating ? parseInt(selectedRating) : undefined,
+        search: searchTerm || undefined,
+        sortBy: "created_at",
+        sortOrder: sortOrder,
+        limit: ITEMS_PER_PAGE,
+        page: page,
+      });
+
+      setComments(result.comments);
+      setPaginationInfo(result.pagination);
+
+      if (user) {
+        const myReview = result.comments.find((c: Comment) => c.authorId === user.id);
+        setMyComment(myReview);
+        setOtherComments(result.comments.filter((c: Comment) => c.id !== myReview?.id));
+      } else {
+        setMyComment(undefined);
+        setOtherComments(result.comments);
+      }
+    } catch (err) {
+      console.error("Error fetching comments:", err);
+    } finally {
+      setIsFiltering(false);
+    }
+  }, [company?.id, selectedRating, searchTerm, sortOrder, user, currentPage]);
+
+  // Fetch comments when company or filters change
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchComments(page);
+    // Scroll to top of reviews section
+    window.scrollTo({ top: 400, behavior: 'smooth' });
+  };
+
+  // Handle search submit
+  const handleSearchSubmit = () => {
+    setCurrentPage(1);
+    fetchComments(1);
+  };
+
+  // Handle rating filter change
+  const handleRatingChange = (rating: string) => {
+    setSelectedRating(rating);
+    setCurrentPage(1);
+  };
+
+  // Handle sort order change
+  const handleSortChange = (order: "ASC" | "DESC") => {
+    setSortOrder(order);
+    setCurrentPage(1);
+  };
+
+  // Handle topic/keyword click
+  const handleTopicClick = (topic: string) => {
+    setSearchTerm(topic);
+    setCurrentPage(1);
+    fetchComments(1);
+  };
+
+  // Handle like comment
+  const handleLikeComment = async (commentId: string) => {
+    if (!user) {
+      alert("Yorum beğenmek için giriş yapmalısınız.");
+      return;
+    }
+
+    try {
+      await likeComment(commentId, user.id);
+      // Refresh comments to update like count
+      fetchComments();
+    } catch (err) {
+      console.error("Error liking comment:", err);
+    }
+  };
+
+  // Handle comment submission
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!user) {
+      setSubmitError("Yorum yapmak için giriş yapmalısınız.");
+      return;
+    }
+
+    if (!company) {
+      setSubmitError("Şirket bilgisi bulunamadı.");
+      return;
+    }
+
+    if (!newCommentMessage.trim()) {
+      setSubmitError("Yorum mesajı boş olamaz.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      await createComment(
+        user.id,
+        company.id,
+        newCommentRating,
+        newCommentMessage,
+        newCommentProductName || undefined,
+        newCommentContactMethod
+      );
+
+      // Reset form
+      setNewCommentRating(5);
+      setNewCommentMessage("");
+      setNewCommentProductName("");
+      setNewCommentContactMethod("website");
+      setShowCommentForm(false);
+
+      // Refresh comments
+      fetchComments();
+
+      alert("Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.");
+    } catch (err) {
+      console.error("Error submitting comment:", err);
+      setSubmitError("Yorum gönderilirken bir hata oluştu.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Format date helper
-  const formatDate = (date: Date) => {
+  const formatDate = (date: Date | string | undefined | null) => {
+    if (!date) return "Tarih bilinmiyor";
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    if (isNaN(dateObj.getTime())) return "Tarih bilinmiyor";
     return new Intl.DateTimeFormat("tr-TR", {
       day: "numeric",
       month: "long",
       year: "numeric",
-    }).format(date);
+    }).format(dateObj);
   };
 
   const midIndex = Math.ceil(otherComments.length / 2);
@@ -103,6 +274,122 @@ const CompanyDetail = () => {
       ) : company ? (
         <main className="w-full max-w-[1357px] px-4">
           <BrandHero company={company} />
+
+          {/* Comment Form Modal */}
+          {showCommentForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    {company.name} Hakkında Yorum Yaz
+                  </h2>
+                  <button
+                    onClick={() => setShowCommentForm(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSubmitComment}>
+                  {/* Rating */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Puanınız
+                    </label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewCommentRating(star)}
+                          className="focus:outline-none"
+                        >
+                          <svg
+                            className="w-8 h-8"
+                            fill={star <= newCommentRating ? "#FFD700" : "#E5E7EB"}
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Product Name */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ürün/Hizmet Adı (Opsiyonel)
+                    </label>
+                    <input
+                      type="text"
+                      value={newCommentProductName}
+                      onChange={(e) => setNewCommentProductName(e.target.value)}
+                      placeholder="Hangi ürün veya hizmeti değerlendiriyorsunuz?"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Contact Method */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      İletişim Yöntemi
+                    </label>
+                    <select
+                      value={newCommentContactMethod}
+                      onChange={(e) => setNewCommentContactMethod(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      {CONTACT_METHODS.map((method) => (
+                        <option key={method.value} value={method.value}>
+                          {method.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Message */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yorumunuz
+                    </label>
+                    <textarea
+                      value={newCommentMessage}
+                      onChange={(e) => setNewCommentMessage(e.target.value)}
+                      placeholder="Deneyiminizi paylaşın..."
+                      rows={5}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                      required
+                    />
+                  </div>
+
+                  {submitError && (
+                    <p className="text-red-500 text-sm mb-4">{submitError}</p>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCommentForm(false)}
+                      className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Gönderiliyor..." : "Yorum Gönder"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* User Review Section */}
           {myComment && (
@@ -185,9 +472,14 @@ const CompanyDetail = () => {
                     />
                   </div>
                 ))}
-                {otherComments.length === 0 && (
+                {otherComments.length === 0 && !isFiltering && (
                   <div className="w-full text-center text-gray-500 py-10">
                     Henüz yorum yapılmamış. İlk yorumu sen yap!
+                  </div>
+                )}
+                {isFiltering && (
+                  <div className="w-full text-center text-gray-500 py-10">
+                    Yorumlar yükleniyor...
                   </div>
                 )}
               </div>
@@ -202,7 +494,13 @@ const CompanyDetail = () => {
                   <div className="max-md:max-w-full max-md:mr-2.5">
                     <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
                       <div className="w-6/12 max-md:w-full max-md:ml-0">
-                        <ReviewFilters />
+                        <ReviewFilters
+                          searchTerm={searchTerm}
+                          selectedRating={selectedRating}
+                          onSearchChange={setSearchTerm}
+                          onRatingChange={handleRatingChange}
+                          onSearchSubmit={handleSearchSubmit}
+                        />
                       </div>
                       <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
                         <div className="w-full mt-[38px] max-md:max-w-full max-md:mt-10">
@@ -219,7 +517,11 @@ const CompanyDetail = () => {
                               ].map((topic) => (
                                 <button
                                   key={topic}
-                                  className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md hover:bg-[rgba(0,0,0,0.08)] transition-colors"
+                                  onClick={() => handleTopicClick(topic)}
+                                  className={`flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md transition-colors ${searchTerm === topic
+                                    ? "bg-purple-100 text-purple-700"
+                                    : "bg-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.08)]"
+                                    }`}
                                 >
                                   <span className="self-stretch my-auto">
                                     {topic}
@@ -228,17 +530,29 @@ const CompanyDetail = () => {
                               ))}
                             </div>
                           </div>
-                          
+
                           {/* Sort Buttons - Aligned Right */}
                           <div className="w-full flex justify-end mt-[74px]">
                             <div className="flex gap-[-1px] rounded-lg whitespace-nowrap text-sm font-normal leading-none">
-                              <button className="justify-center items-center border flex gap-1.5 overflow-hidden text-[#17181A] bg-white px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] hover:bg-gray-50 transition-colors">
-                                <span className="text-[#17181A] self-stretch my-auto">
+                              <button
+                                onClick={() => handleSortChange("ASC")}
+                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] transition-colors ${sortOrder === "ASC"
+                                  ? "text-[#17181A] bg-white"
+                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                                  }`}
+                              >
+                                <span className="self-stretch my-auto">
                                   En Eski
                                 </span>
                               </button>
-                              <button className="justify-center items-center border flex gap-1.5 overflow-hidden text-[#99B2C6] bg-[#F1F5F7] px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] hover:bg-white hover:text-[#17181A] transition-colors">
-                                <span className="text-[#99B2C6] self-stretch my-auto">
+                              <button
+                                onClick={() => handleSortChange("DESC")}
+                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] transition-colors ${sortOrder === "DESC"
+                                  ? "text-[#17181A] bg-white"
+                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                                  }`}
+                              >
+                                <span className="self-stretch my-auto">
                                   En Yeni
                                 </span>
                               </button>
@@ -250,80 +564,21 @@ const CompanyDetail = () => {
                   </div>
 
                   {/* Reviews List */}
-                  {otherComments.length > 0 && (
+                  {isFiltering ? (
+                    <div className="mt-[58px] flex justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    </div>
+                  ) : otherComments.length > 0 ? (
                     <div className="mt-[58px] max-md:max-w-full max-md:mt-10">
                       <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
                         <div className="w-6/12 max-md:w-full max-md:ml-0">
                           <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
                             {leftColumnComments.map((review) => (
-                              <article key={review.id} className="w-full">
-                                <div className="flex w-full items-stretch gap-[40px_65px]">
-                                  <div className="flex items-stretch gap-[13px] grow shrink basis-auto">
-                                    <img
-                                      src={
-                                        review.authorAvatar ||
-                                        "https://api.builder.io/api/v1/image/assets/TEMP/ed4d506d869550e63301cda115d2a37f3f3d8102?placeholderIfAbsent=true"
-                                      }
-                                      alt={`${review.authorName} avatar`}
-                                      className="aspect-[1] object-cover w-[52px] shrink-0 my-auto rounded-[50%]"
-                                    />
-                                    <div className="flex flex-col items-stretch">
-                                      <div className="flex items-stretch gap-[7px] text-[26px] text-[#202023] font-semibold leading-[1.4]">
-                                        <div className="text-[#202023]">
-                                          {review.authorName}
-                                        </div>
-                                        <img
-                                          src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                                          alt="Verified"
-                                          className="aspect-[0.85] object-contain w-[11px] shrink-0 mt-3.5"
-                                        />
-                                      </div>
-                                      <div className="text-[#6B6B6E] text-base font-medium mt-2">
-                                        {review.authorName} • {review.status}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-[#6B6B6E] text-[13px] font-medium my-auto">
-                                    {formatDate(review.date)}
-                                  </div>
-                                </div>
-                                <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mt-10">
-                                  {review.message}
-                                </p>
-                                <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium justify-between mt-2 max-md:mr-[5px]">
-                                  <div className="flex gap-[31px]">
-                                    <button className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity">
-                                      <img
-                                        src="https://api.builder.io/api/v1/image/assets/TEMP/07dc1f4467d8862ae84366171051235f3f317d39?placeholderIfAbsent=true"
-                                        alt="Helpful"
-                                        className="aspect-[1] object-contain w-3.5 shrink-0"
-                                      />
-                                      <span className="text-[#6B6B6E]">
-                                        Yararlı{" "}
-                                        <span className="font-semibold">
-                                          {review.likesCount}
-                                        </span>
-                                      </span>
-                                    </button>
-                                    <button className="flex items-stretch gap-[7px] whitespace-nowrap hover:opacity-70 transition-opacity">
-                                      <img
-                                        src="https://api.builder.io/api/v1/image/assets/TEMP/a79bac48bbf0a5e04f1ea45591c2195ef4e1848f?placeholderIfAbsent=true"
-                                        alt="Share"
-                                        className="aspect-[1] object-contain w-3.5 shrink-0"
-                                      />
-                                      <span className="text-[#6B6B6E]">
-                                        Paylaş
-                                      </span>
-                                    </button>
-                                  </div>
-                                  <img
-                                    src="https://api.builder.io/api/v1/image/assets/TEMP/2782f7a3b0e38be65d6c730a414fb34102b806d9?placeholderIfAbsent=true"
-                                    alt="More options"
-                                    className="aspect-[0.75] object-contain w-3 shrink-0"
-                                  />
-                                </div>
-                                <hr className="w-full mt-[31px] border-t border-gray-200" />
-                              </article>
+                              <ReviewItem
+                                key={review.id}
+                                review={review}
+                                onLike={handleLikeComment}
+                              />
                             ))}
                           </div>
                         </div>
@@ -331,79 +586,22 @@ const CompanyDetail = () => {
                           <div className="w-full">
                             <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
                               {rightColumnComments.map((review) => (
-                                <article key={review.id} className="w-full">
-                                  <div className="flex w-full items-stretch gap-[40px_70px]">
-                                    <div className="flex items-stretch gap-[13px] grow shrink basis-auto">
-                                      <img
-                                        src={
-                                          review.authorAvatar ||
-                                          "https://api.builder.io/api/v1/image/assets/TEMP/ed4d506d869550e63301cda115d2a37f3f3d8102?placeholderIfAbsent=true"
-                                        }
-                                        alt={`${review.authorName} avatar`}
-                                        className="aspect-[1] object-cover w-[52px] shrink-0 my-auto rounded-[50%]"
-                                      />
-                                      <div className="flex flex-col items-stretch">
-                                        <div className="flex items-stretch gap-[7px] text-[26px] text-[#202023] font-semibold leading-[1.4]">
-                                          <div className="text-[#202023]">
-                                            {review.authorName}
-                                          </div>
-                                          <img
-                                            src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                                            alt="Verified"
-                                            className="aspect-[0.85] object-contain w-[11px] shrink-0 mt-3.5"
-                                          />
-                                        </div>
-                                        <div className="text-[#6B6B6E] text-base font-medium mt-2">
-                                          {review.authorName} • {review.status}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="text-[#6B6B6E] text-[13px] font-medium my-auto">
-                                      {formatDate(review.date)}
-                                    </div>
-                                  </div>
-                                  <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mr-[5px] max-md:mt-10">
-                                    {review.message}
-                                  </p>
-                                  <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium justify-between mt-2 max-md:mr-[5px]">
-                                    <div className="flex gap-[31px]">
-                                      <button className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity">
-                                        <img
-                                          src="https://api.builder.io/api/v1/image/assets/TEMP/36604c57b9a3d63686bccbb1e83e92e6ea560faf?placeholderIfAbsent=true"
-                                          alt="Helpful"
-                                          className="aspect-[1] object-contain w-3.5 shrink-0"
-                                        />
-                                        <span className="text-[#6B6B6E]">
-                                          Yararlı{" "}
-                                          <span className="font-semibold">
-                                            {review.likesCount}
-                                          </span>
-                                        </span>
-                                      </button>
-                                      <button className="flex items-stretch gap-[7px] whitespace-nowrap hover:opacity-70 transition-opacity">
-                                        <img
-                                          src="https://api.builder.io/api/v1/image/assets/TEMP/9a6a3537a6621d8c71eae8ea5e8d58615936b07a?placeholderIfAbsent=true"
-                                          alt="Share"
-                                          className="aspect-[1] object-contain w-3.5 shrink-0"
-                                        />
-                                        <span className="text-[#6B6B6E]">
-                                          Paylaş
-                                        </span>
-                                      </button>
-                                    </div>
-                                    <img
-                                      src="https://api.builder.io/api/v1/image/assets/TEMP/2782f7a3b0e38be65d6c730a414fb34102b806d9?placeholderIfAbsent=true"
-                                      alt="More options"
-                                      className="aspect-[0.75] object-contain w-3 shrink-0"
-                                    />
-                                  </div>
-                                  <hr className="w-full mt-[31px] border-t border-gray-200" />
-                                </article>
+                                <ReviewItem
+                                  key={review.id}
+                                  review={review}
+                                  onLike={handleLikeComment}
+                                />
                               ))}
                             </div>
                           </div>
                         </div>
                       </div>
+                    </div>
+                  ) : (
+                    <div className="mt-[58px] text-center text-gray-500">
+                      {searchTerm || selectedRating
+                        ? "Filtrelere uygun yorum bulunamadı."
+                        : "Henüz yorum yapılmamış."}
                     </div>
                   )}
                 </div>
@@ -435,7 +633,13 @@ const CompanyDetail = () => {
             </div>
           </section>
 
-          <Pagination />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={paginationInfo.totalPages}
+            totalItems={paginationInfo.total}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={handlePageChange}
+          />
         </main>
       ) : null}
 

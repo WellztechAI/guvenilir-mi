@@ -55,7 +55,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       </p>
       <footer className="flex w-full items-stretch gap-5 flex-wrap justify-between mt-[31px] max-md:max-w-full">
         <div className="flex items-stretch gap-2.5 text-[9px] text-[#6B6B6E]">
-          <button 
+          <button
             onClick={handleHelpfulClick}
             className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity"
             aria-label={`Mark as helpful (${helpfulCount} people found this helpful)`}

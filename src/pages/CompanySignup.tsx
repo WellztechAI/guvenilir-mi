@@ -2,26 +2,42 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { CompanyVerification } from '@/types';
-import { createCompanyVerification } from '@/services/companyVerificationService';
-import { useAuth } from '@/hooks/useAuth';
+import { createCompany, createCompanyVerification } from '@/services/authApiService';
 import citiesData from '@/constants/cities.json';
 
 type Step = 1 | 2 | 3 | 4;
 
 
+// Form data interface for company verification
+interface CompanyFormData {
+    companyName: string;
+    companySlug: string;
+    requesterName: string;
+    requesterTitle: string;
+    requesterCompanyEmail: string;
+    requesterPhoneNumber: string;
+    panelUserName: string;
+    mernisNo: string;
+    signatureUrls: string;
+    address: string;
+    city: string;
+    district: string;
+    postalCode: string;
+    membership: 'free' | 'basic' | 'premium' | 'enterprise';
+}
+
 const CompanySignup = () => {
     const navigate = useNavigate();
-    const { register } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [acceptedTerms, setAcceptedTerms] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [verificationId, setVerificationId] = useState<string | null>(null);
 
-    // Form data matching CompanyVerification model
-    const [formData, setFormData] = useState<Partial<CompanyVerification>>({
-        companyId: '', // Will be generated or linked later
+    // Form data for company verification
+    const [formData, setFormData] = useState<CompanyFormData>({
+        companyName: '',
+        companySlug: '',
         requesterName: '',
         requesterTitle: '',
         requesterCompanyEmail: '',
@@ -34,7 +50,6 @@ const CompanySignup = () => {
         district: '',
         postalCode: '',
         membership: 'free',
-        status: 'pending',
     });
 
     // Additional fields for step 2
@@ -47,8 +62,25 @@ const CompanySignup = () => {
         cvv: '',
     });
 
-    const updateFormData = (field: keyof CompanyVerification, value: string) => {
+    const updateFormData = (field: keyof CompanyFormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+
+        // Auto-generate slug from company name
+        if (field === 'companyName') {
+            const slug = value
+                .toLowerCase()
+                .replace(/[ğ]/g, 'g')
+                .replace(/[ü]/g, 'u')
+                .replace(/[ş]/g, 's')
+                .replace(/[ı]/g, 'i')
+                .replace(/[ö]/g, 'o')
+                .replace(/[ç]/g, 'c')
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+            setFormData(prev => ({ ...prev, companySlug: slug }));
+        }
     };
 
     const handleNextStep = () => {
@@ -88,42 +120,39 @@ const CompanySignup = () => {
         setError(null);
 
         try {
-            // Step 1: Create Firebase Auth user for the company
-            // Using requesterCompanyEmail as email, panelPassword as password
-            // userType 'company' is stored in displayName for O(1) type detection
-            console.log('Creating Firebase Auth user for company...');
-            await register(
-                formData.requesterCompanyEmail || '',
-                panelPassword,
-                'company',
-                formData.panelUserName,
-                formData.requesterPhoneNumber
-            );
-            console.log('Company user created in Firebase Auth');
+            // Step 1: Create the company via API
+            console.log('Creating company via API...');
+            const companyResponse = await createCompany({
+                name: formData.companyName,
+                slug: formData.companySlug,
+                description: `${formData.companyName} şirketi`,
+                phone: formData.requesterPhoneNumber,
+            });
+            console.log('Company created with ID:', companyResponse.id);
 
-            // Step 2: Prepare and save company verification data to Firestore
+            // Step 2: Create company verification request via API
             const verificationData = {
-                companyId: formData.companyId || `company_${Date.now()}`,
-                requesterName: formData.requesterName || '',
-                requesterTitle: formData.requesterTitle || '',
-                requesterCompanyEmail: formData.requesterCompanyEmail || '',
-                requesterPhoneNumber: formData.requesterPhoneNumber,
-                panelUserName: formData.panelUserName || '',
-                mernisNo: formData.mernisNo || '',
-                signatureUrls: formData.signatureUrls || '',
-                address: formData.address || '',
-                city: formData.city || '',
-                district: formData.district || '',
-                postalCode: formData.postalCode || '',
-                membership: formData.membership || 'free',
-                status: 'pending',
+                companyId: companyResponse.id,
+                requesterName: formData.requesterName,
+                requesterTitle: formData.requesterTitle || undefined,
+                requesterCompanyEmail: formData.requesterCompanyEmail,
+                requesterPhoneNumber: formData.requesterPhoneNumber || undefined,
+                panelUserName: formData.panelUserName,
+                panelPassword: panelPassword,
+                mernisNo: formData.mernisNo || undefined,
+                signatureUrls: formData.signatureUrls ? [formData.signatureUrls] : undefined,
+                address: formData.address || undefined,
+                city: formData.city || undefined,
+                district: formData.district || undefined,
+                postalCode: formData.postalCode || undefined,
+                membership: formData.membership,
             };
 
             console.log('Submitting company verification:', verificationData);
-            const docId = await createCompanyVerification(verificationData);
-            console.log('Company verification created with ID:', docId);
+            const verificationResponse = await createCompanyVerification(verificationData);
+            console.log('Company verification created with ID:', verificationResponse.id);
 
-            setVerificationId(docId);
+            setVerificationId(verificationResponse.id);
             setCurrentStep(4);
         } catch (err) {
             console.error('Error during company signup:', err);
@@ -202,6 +231,17 @@ const CompanySignup = () => {
                                 Başvuru yaptıktan sonra ekiplerimize kontrol edildikten sonrasında size işleme devam edebilmeniz için bir link bağlantısı göndereceğiz.
                             </p>
 
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    value={formData.companyName}
+                                    onChange={(e) => updateFormData('companyName', e.target.value)}
+                                    placeholder="Şirket / Marka Adı"
+                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
+                                    style={{ fontFamily: 'Manrope, sans-serif' }}
+                                />
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <input
@@ -267,7 +307,7 @@ const CompanySignup = () => {
                                 <div className="flex justify-end">
                                     <button
                                         onClick={handleNextStep}
-                                        disabled={!acceptedTerms || !formData.requesterName || !formData.requesterCompanyEmail}
+                                        disabled={!acceptedTerms || !formData.companyName || !formData.requesterName || !formData.requesterCompanyEmail}
                                         className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ fontFamily: 'Metropolis, sans-serif' }}
                                     >
@@ -457,7 +497,7 @@ const CompanySignup = () => {
                                         />
                                     </div>
 
-                                    {formData.membership === 'plus' && (
+                                    {formData.membership === 'premium' && (
                                         <div className="grid grid-cols-3 gap-4">
                                             <input
                                                 type="text"
@@ -521,18 +561,18 @@ const CompanySignup = () => {
 
                                 <div className="space-y-3">
                                     <label
-                                        className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.membership === 'plus' ? 'border-[#2EC4B6] bg-[#2EC4B6]/5' : 'border-gray-200'
+                                        className={`flex items-center justify-between p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.membership === 'premium' ? 'border-[#2EC4B6] bg-[#2EC4B6]/5' : 'border-gray-200'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <input
                                                 type="radio"
                                                 name="membership"
-                                                checked={formData.membership === 'plus'}
-                                                onChange={() => updateFormData('membership', 'plus')}
+                                                checked={formData.membership === 'premium'}
+                                                onChange={() => updateFormData('membership', 'premium')}
                                                 className="w-5 h-5 text-[#2EC4B6]"
                                             />
-                                            <span className="font-semibold" style={{ fontFamily: 'Metropolis, sans-serif' }}>Plus Paket</span>
+                                            <span className="font-semibold" style={{ fontFamily: 'Metropolis, sans-serif' }}>Premium Paket</span>
                                             <span className="text-xs bg-[#2EC4B6] text-white px-2 py-0.5 rounded-full">İlk 30 gün ücretsiz</span>
                                         </div>
                                         <span className="font-bold text-[#202023]">999₺</span>
@@ -585,39 +625,39 @@ const CompanySignup = () => {
                             <div className="grid grid-cols-2 gap-4 mb-8">
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Marka</p>
-                                    <p className="font-medium text-[#202023]">Majority Mobile Banking</p>
+                                    <p className="font-medium text-[#202023]">{formData.companyName || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Yetkili</p>
-                                    <p className="font-medium text-[#202023]">{formData.requesterName || 'Ömer Akacaan'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.requesterName || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">İmza Sirküleri</p>
-                                    <p className="font-medium text-[#202023]">{formData.signatureUrls || 'imza-sirkusu.jpg'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.signatureUrls || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Telefon Numarası</p>
-                                    <p className="font-medium text-[#202023]">0500 000 00 00</p>
+                                    <p className="font-medium text-[#202023]">{formData.requesterPhoneNumber || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Adres</p>
-                                    <p className="font-medium text-[#202023]">{formData.address || 'Lorem Ipsum Cad. Lorem Ipsum Sk. No:34'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.address || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Mersis Numarası</p>
-                                    <p className="font-medium text-[#202023]">{formData.mernisNo || '312312312323'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.mernisNo || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Şehir</p>
-                                    <p className="font-medium text-[#202023]">{formData.city || 'İstanbul'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.city || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">İlçe</p>
-                                    <p className="font-medium text-[#202023]">{formData.district || 'Çekmeköy'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.district || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg col-span-2">
                                     <p className="text-sm text-gray-500">Posta Kodu</p>
-                                    <p className="font-medium text-[#202023]">{formData.postalCode || '34000'}</p>
+                                    <p className="font-medium text-[#202023]">{formData.postalCode || '-'}</p>
                                 </div>
                             </div>
 

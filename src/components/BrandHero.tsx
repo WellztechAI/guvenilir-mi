@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Company } from '@/types';
 import { useAuthStore } from '@/store/authStore';
-import { updateUser } from '@/services/userService';
+import { addFavouriteCompany, removeFavouriteCompany, refreshUser } from '@/services/authApiService';
 import { ReviewModal } from './ReviewModal';
 import { Heart } from 'lucide-react';
 
@@ -16,11 +16,11 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    if (user?.favouriteCompanies?.includes(company.id)) {
-      setIsFavorite(true);
-    } else {
-      setIsFavorite(false);
-    }
+    // Check if company is in favourites (can be either objects with id or plain strings for backward compatibility)
+    const isFav = user?.favouriteCompanies?.some(fav =>
+      typeof fav === 'string' ? fav === company.id : fav.id === company.id
+    ) ?? false;
+    setIsFavorite(isFav);
   }, [user, company.id]);
 
   const handleFavoriteClick = async () => {
@@ -33,23 +33,32 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
     setIsUpdating(true);
 
     try {
-      const currentFavorites = user.favouriteCompanies || [];
-      let newFavorites: string[];
-
       if (isFavorite) {
-        newFavorites = currentFavorites.filter(id => id !== company.id);
+        await removeFavouriteCompany(user.id, company.id);
       } else {
-        newFavorites = [...currentFavorites, company.id];
+        await addFavouriteCompany(user.id, company.id);
       }
 
-      await updateUser(user.id, { favouriteCompanies: newFavorites });
-
       // Update local state immediately for UI responsiveness
-      // Note: In a real app with real-time listeners, the store might update automatically
       setIsFavorite(!isFavorite);
 
-      // Manually update store user object if needed, but the store subscription should handle it
-      // For now, we rely on the useEffect to sync if the user object updates from outside
+      // Refresh user data to get updated favourites
+      try {
+        const updatedUser = await refreshUser(user.id);
+        useAuthStore.getState().setUser({
+          id: updatedUser.id,
+          userName: updatedUser.userName,
+          email: updatedUser.email,
+          phoneNumber: updatedUser.phoneNumber,
+          country: updatedUser.country,
+          imageUrl: updatedUser.imageUrl,
+          status: updatedUser.status,
+          createdAt: updatedUser.createdAt,
+          favouriteCompanies: updatedUser.favouriteCompanies || [],
+        });
+      } catch (refreshError) {
+        console.error('Error refreshing user data:', refreshError);
+      }
     } catch (error) {
       console.error('Error updating favorites:', error);
       alert('Favoriler güncellenirken bir hata oluştu');
