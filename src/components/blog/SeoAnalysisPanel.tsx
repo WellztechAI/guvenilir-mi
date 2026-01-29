@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { useEffect, useState } from "react";
+import { translateResults } from "@/services/translationService";
 
 interface SeoAnalysisProps {
     seoScore: number | null;
@@ -29,14 +31,40 @@ const SeoAnalysisPanel = ({
     metaDescription,
     setMetaDescription
 }: SeoAnalysisProps) => {
+    const [translatedResults, setTranslatedResults] = useState<any[]>([]);
+    const [isTranslating, setIsTranslating] = useState(false);
 
-    const seoProblems = analysisResults.filter(r => r.type === 'seo' && r.score < 5);
-    const seoImprovements = analysisResults.filter(r => r.type === 'seo' && r.score >= 5 && r.score < 7);
-    const seoGood = analysisResults.filter(r => r.type === 'seo' && r.score >= 7);
+    useEffect(() => {
+        const translate = async () => {
+            if (analysisResults.length === 0) {
+                setTranslatedResults([]);
+                return;
+            }
 
-    const contentProblems = analysisResults.filter(r => r.type === 'content' && r.score < 5);
-    const contentImprovements = analysisResults.filter(r => r.type === 'content' && r.score >= 5 && r.score < 7);
-    const contentGood = analysisResults.filter(r => r.type === 'content' && r.score >= 7);
+            setIsTranslating(true);
+            try {
+                const translated = await translateResults(analysisResults);
+                setTranslatedResults(translated);
+            } catch (error) {
+                console.error("Translation error in panel:", error);
+                setTranslatedResults(analysisResults);
+            } finally {
+                setIsTranslating(false);
+            }
+        };
+
+        translate();
+    }, [analysisResults]);
+
+    const resultsToUse = translatedResults.length > 0 ? translatedResults : analysisResults;
+
+    const seoProblems = resultsToUse.filter(r => r.type === 'seo' && r.score < 5);
+    const seoImprovements = resultsToUse.filter(r => r.type === 'seo' && r.score >= 5 && r.score < 7);
+    const seoGood = resultsToUse.filter(r => r.type === 'seo' && r.score >= 7);
+
+    const contentProblems = resultsToUse.filter(r => r.type === 'content' && r.score < 5);
+    const contentImprovements = resultsToUse.filter(r => r.type === 'content' && r.score >= 5 && r.score < 7);
+    const contentGood = resultsToUse.filter(r => r.type === 'content' && r.score >= 7);
 
     return (
         <Card className="border shadow-sm">
@@ -107,8 +135,10 @@ const SeoAnalysisPanel = ({
                                 <AccordionTrigger className="text-lg font-bold">SEO Analizi</AccordionTrigger>
                                 <AccordionContent>
                                     <div className="space-y-4">
-                                        {analysisResults.length === 0 && (
-                                            <p className="text-gray-500 italic">Analiz için içerik ve odak anahtar kelime bekleniyor...</p>
+                                        {(analysisResults.length === 0 || (isTranslating && translatedResults.length === 0)) && (
+                                            <p className="text-gray-500 italic">
+                                                {isTranslating ? "Çeviriliyor..." : "Analiz için içerik ve odak anahtar kelime bekleniyor..."}
+                                            </p>
                                         )}
 
                                         {seoProblems.length > 0 && (

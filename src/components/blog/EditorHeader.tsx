@@ -13,7 +13,7 @@ const EditorHeader = ({ onSaveDraft, onPublish, isSaving, isPublishing }: Editor
   return (
     <div className="flex justify-between items-center mb-6 bg-white p-4 rounded-lg shadow-sm border">
       <div className="flex items-center gap-4">
-        <Link to="/dashboard" className="text-gray-500 hover:text-gray-700 transition-colors">
+        <Link to="/admin/panel" className="text-gray-500 hover:text-gray-700 transition-colors">
             <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
