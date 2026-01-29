@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   fetchAllCompanyVerifications,
   updateVerificationStatus,
@@ -18,6 +19,7 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<TabType>('comments');
 
   // Verification state
+  const navigate = useNavigate();
   const [verifications, setVerifications] = useState<CompanyVerification[]>([]);
   const [isLoadingVerifications, setIsLoadingVerifications] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<CompanyVerification | null>(null);
@@ -379,14 +381,21 @@ const AdminPanel = () => {
               Yorumları ve işletme başvurularını yönetin
             </p>
           </div>
-
-          <button
-            onClick={() => setShowCouponModal(true)}
-            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition flex items-center gap-2"
-          >
-            <Gift size={20} />
-            Kupon Gönder
-          </button>
+          
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate('/blog-editor')}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+            >
+              Blog Yaz (SEO)
+            </button>
+            <button
+              onClick={() => setShowCouponModal(true)}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition"
+            >
+              Kupon Gönder
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}

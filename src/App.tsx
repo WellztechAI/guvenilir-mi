@@ -17,6 +17,7 @@ import SSS from "./pages/SSS";
 import CommentPolicy from "./pages/CommentPolicy";
 import CommunityRules from "./pages/CommunityRules";
 import BrandArea from "./pages/BrandArea";
+import BlogEditor from "./pages/BlogEditor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/yorum-politikasi" element={<CommentPolicy />} />
             <Route path="/topluluk-kurallari" element={<CommunityRules />} />
             <Route path="/marka-alani" element={<BrandArea />} />
+            <Route path="/blog-editor" element={<BlogEditor />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
