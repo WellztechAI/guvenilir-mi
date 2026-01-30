@@ -219,6 +219,7 @@ export interface CreateCompanyResponse {
 
 export interface CreateVerificationRequest {
     companyId: string;
+    companyName?: string;
     requesterName: string;
     requesterTitle?: string;
     requesterCompanyEmail: string;

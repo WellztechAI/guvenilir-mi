@@ -7,41 +7,41 @@ import { CompanyVerification, Comment } from '@/types';
 
 interface ApiVerification {
     id: string;
-    company_id: string;
-    requester_name: string;
-    requester_title: string;
-    requester_company_email: string;
-    requester_phone_number?: string;
-    panel_user_name: string;
-    mernis_no: string;
-    signature_urls: string[];
+    companyId: string;
+    requesterName: string;
+    requesterTitle: string;
+    requesterCompanyEmail: string;
+    requesterPhoneNumber?: string;
+    panelUserName: string;
+    mernisNo: string;
+    signatureUrls: string[];
     address: string;
     city: string;
     district: string;
-    postal_code: string;
+    postalCode: string;
     membership: string;
     status: string;
-    rejection_reason?: string;
-    created_at: string;
-    updated_at: string;
+    rejectionReason?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 interface ApiComment {
     id: string;
-    author_id: string;
-    author_name: string;
-    author_avatar?: string;
-    company_id: string;
-    company_name: string;
-    created_at: string;
+    authorId: string;
+    authorName: string;
+    authorAvatar?: string;
+    companyId: string;
+    companyName: string;
+    createdAt: string;
     rating: number;
     status: string;
     message: string;
     answer?: string;
-    answer_date?: string;
-    likes_count: number;
-    product_name?: string;
-    contact_method?: string;
+    answerDate?: string;
+    likesCount: number;
+    productName?: string;
+    contactMethod?: string;
 }
 
 interface VerificationsResponse {
@@ -72,40 +72,40 @@ interface CommentsResponse {
 
 const apiVerificationToVerification = (apiVerification: ApiVerification): CompanyVerification => ({
     id: apiVerification.id,
-    companyId: apiVerification.company_id,
-    requesterName: apiVerification.requester_name,
-    requesterTitle: apiVerification.requester_title,
-    requesterCompanyEmail: apiVerification.requester_company_email,
-    requesterPhoneNumber: apiVerification.requester_phone_number,
-    panelUserName: apiVerification.panel_user_name,
-    mernisNo: apiVerification.mernis_no,
-    signatureUrls: apiVerification.signature_urls || [],
+    companyId: apiVerification.companyId,
+    requesterName: apiVerification.requesterName,
+    requesterTitle: apiVerification.requesterTitle,
+    requesterCompanyEmail: apiVerification.requesterCompanyEmail,
+    requesterPhoneNumber: apiVerification.requesterPhoneNumber,
+    panelUserName: apiVerification.panelUserName,
+    mernisNo: apiVerification.mernisNo,
+    signatureUrls: apiVerification.signatureUrls || [],
     address: apiVerification.address,
     city: apiVerification.city,
     district: apiVerification.district,
-    postalCode: apiVerification.postal_code,
+    postalCode: apiVerification.postalCode,
     membership: apiVerification.membership,
     status: apiVerification.status,
-    rejectionReason: apiVerification.rejection_reason,
-    createdAt: new Date(apiVerification.created_at),
+    rejectionReason: apiVerification.rejectionReason,
+    createdAt: new Date(apiVerification.createdAt),
 });
 
 const apiCommentToComment = (apiComment: ApiComment): Comment => ({
     id: apiComment.id,
-    authorId: apiComment.author_id,
-    authorName: apiComment.author_name || 'Anonim',
-    authorAvatar: apiComment.author_avatar,
-    companyId: apiComment.company_id,
-    companyName: apiComment.company_name || '',
-    date: apiComment.created_at ? new Date(apiComment.created_at) : new Date(),
+    authorId: apiComment.authorId,
+    authorName: apiComment.authorName || 'Anonim',
+    authorAvatar: apiComment.authorAvatar,
+    companyId: apiComment.companyId,
+    companyName: apiComment.companyName || '',
+    date: apiComment.createdAt ? new Date(apiComment.createdAt) : new Date(),
     rating: apiComment.rating || 0,
     status: apiComment.status || 'pending',
     message: apiComment.message || '',
     answer: apiComment.answer,
-    answerDate: apiComment.answer_date ? new Date(apiComment.answer_date) : undefined,
-    likesCount: apiComment.likes_count || 0,
-    productName: apiComment.product_name,
-    contactMethod: apiComment.contact_method,
+    answerDate: apiComment.answerDate ? new Date(apiComment.answerDate) : undefined,
+    likesCount: apiComment.likesCount || 0,
+    productName: apiComment.productName,
+    contactMethod: apiComment.contactMethod,
 });
 
 // ============================================

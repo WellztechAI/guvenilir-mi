@@ -121,18 +121,35 @@ const CompanySignup = () => {
 
         try {
             // Step 1: Create the company via API
-            console.log('Creating company via API...');
-            const companyResponse = await createCompany({
+            console.log('Creating company via API with data:', {
                 name: formData.companyName,
                 slug: formData.companySlug,
                 description: `${formData.companyName} şirketi`,
                 phone: formData.requesterPhoneNumber,
             });
-            console.log('Company created with ID:', companyResponse.id);
+            
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const companyResponse: any = await createCompany({
+                name: formData.companyName,
+                slug: formData.companySlug,
+                description: `${formData.companyName} şirketi`,
+                phone: formData.requesterPhoneNumber,
+            });
+            console.log('FULL Company Response:', JSON.stringify(companyResponse, null, 2));
+            
+            // Handle potential response wrapping (e.g. { data: { id: ... } } vs { id: ... })
+            const companyId = companyResponse.id || (companyResponse.data && companyResponse.data.id);
+            console.log('Extracted Company ID:', companyId);
+
+            if (!companyId) {
+                console.error('Failed to get company ID from response:', companyResponse);
+                throw new Error('Şirket oluşturuldu ancak ID alınamadı. Lütfen geliştirici konsolunu kontrol edin.');
+            }
 
             // Step 2: Create company verification request via API
             const verificationData = {
-                companyId: companyResponse.id,
+                companyId: companyId,
+                companyName: formData.companyName,
                 requesterName: formData.requesterName,
                 requesterTitle: formData.requesterTitle || undefined,
                 requesterCompanyEmail: formData.requesterCompanyEmail,
@@ -148,7 +165,12 @@ const CompanySignup = () => {
                 membership: formData.membership,
             };
 
-            console.log('Submitting company verification:', verificationData);
+            console.log('Submitting company verification with payload:', JSON.stringify(verificationData, null, 2));
+            
+            // Check for missing required fields manually to debug "required" error
+            if (!verificationData.companyId) console.error('MISSING: companyId');
+            if (!verificationData.requesterName) console.error('MISSING: requesterName');
+            if (!verificationData.requesterCompanyEmail) console.error('MISSING: requesterCompanyEmail');
             const verificationResponse = await createCompanyVerification(verificationData);
             console.log('Company verification created with ID:', verificationResponse.id);
 
