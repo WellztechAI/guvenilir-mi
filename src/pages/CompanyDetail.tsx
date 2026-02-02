@@ -8,13 +8,19 @@ import { ReviewItem } from "@/components/ReviewItem";
 import { Pagination } from "@/components/Pagination";
 import { Footer } from "@/components/Footer";
 import { fetchCompany, fetchCompanyBySlug } from "@/services/companyService";
-import { fetchCommentsByCompanyIdPaginated, createComment, likeComment, PaginationInfo } from "@/services/commentService";
+import {
+  fetchCommentsByCompanyIdPaginated,
+  createComment,
+  likeComment,
+  PaginationInfo,
+} from "@/services/commentService";
 import { useAuthStore } from "@/store/authStore";
 import { Company, Comment } from "@/types";
 
 // Helper to check if a string is a UUID
 const isUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
 
@@ -26,8 +32,6 @@ const CONTACT_METHODS = [
   { value: "in_person", label: "Yüz Yüze" },
   { value: "social_media", label: "Sosyal Medya" },
 ];
-
-
 
 const CompanyDetail = () => {
   const { id: companyIdentifier } = useParams<{ id: string }>();
@@ -61,7 +65,8 @@ const CompanyDetail = () => {
   const [newCommentRating, setNewCommentRating] = useState(5);
   const [newCommentMessage, setNewCommentMessage] = useState("");
   const [newCommentProductName, setNewCommentProductName] = useState("");
-  const [newCommentContactMethod, setNewCommentContactMethod] = useState("website");
+  const [newCommentContactMethod, setNewCommentContactMethod] =
+    useState("website");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -69,18 +74,25 @@ const CompanyDetail = () => {
   useEffect(() => {
     const loadCompany = async () => {
       if (!companyIdentifier) {
+        console.error("No company identifier provided");
         setError("Şirket bulunamadı");
         setIsLoading(false);
         return;
       }
 
       try {
+        console.log("Loading company with identifier:", companyIdentifier);
+        console.log("Is UUID?", isUUID(companyIdentifier));
+
         setIsLoading(true);
         const companyData = isUUID(companyIdentifier)
           ? await fetchCompany(companyIdentifier)
           : await fetchCompanyBySlug(companyIdentifier);
 
+        console.log("Company data received:", companyData);
+
         if (!companyData) {
+          console.error("No company data returned");
           setError("Şirket bulunamadı");
           setIsLoading(false);
           return;
@@ -99,38 +111,45 @@ const CompanyDetail = () => {
   }, [companyIdentifier]);
 
   // Fetch comments with filters and pagination
-  const fetchComments = useCallback(async (page: number = currentPage) => {
-    if (!company?.id) return;
+  const fetchComments = useCallback(
+    async (page: number = currentPage) => {
+      if (!company?.id) return;
 
-    try {
-      setIsFiltering(true);
-      const result = await fetchCommentsByCompanyIdPaginated(company.id, {
-        status: "approved",
-        rating: selectedRating ? parseInt(selectedRating) : undefined,
-        search: searchTerm || undefined,
-        sortBy: "created_at",
-        sortOrder: sortOrder,
-        limit: ITEMS_PER_PAGE,
-        page: page,
-      });
+      try {
+        setIsFiltering(true);
+        const result = await fetchCommentsByCompanyIdPaginated(company.id, {
+          status: "approved",
+          rating: selectedRating ? parseInt(selectedRating) : undefined,
+          search: searchTerm || undefined,
+          sortBy: "created_at",
+          sortOrder: sortOrder,
+          limit: ITEMS_PER_PAGE,
+          page: page,
+        });
 
-      setComments(result.comments);
-      setPaginationInfo(result.pagination);
+        setComments(result.comments);
+        setPaginationInfo(result.pagination);
 
-      if (user) {
-        const myReview = result.comments.find((c: Comment) => c.authorId === user.id);
-        setMyComment(myReview);
-        setOtherComments(result.comments.filter((c: Comment) => c.id !== myReview?.id));
-      } else {
-        setMyComment(undefined);
-        setOtherComments(result.comments);
+        if (user) {
+          const myReview = result.comments.find(
+            (c: Comment) => c.authorId === user.id,
+          );
+          setMyComment(myReview);
+          setOtherComments(
+            result.comments.filter((c: Comment) => c.id !== myReview?.id),
+          );
+        } else {
+          setMyComment(undefined);
+          setOtherComments(result.comments);
+        }
+      } catch (err) {
+        console.error("Error fetching comments:", err);
+      } finally {
+        setIsFiltering(false);
       }
-    } catch (err) {
-      console.error("Error fetching comments:", err);
-    } finally {
-      setIsFiltering(false);
-    }
-  }, [company?.id, selectedRating, searchTerm, sortOrder, user, currentPage]);
+    },
+    [company?.id, selectedRating, searchTerm, sortOrder, user, currentPage],
+  );
 
   // Fetch comments when company or filters change
   useEffect(() => {
@@ -142,7 +161,7 @@ const CompanyDetail = () => {
     setCurrentPage(page);
     fetchComments(page);
     // Scroll to top of reviews section
-    window.scrollTo({ top: 400, behavior: 'smooth' });
+    window.scrollTo({ top: 400, behavior: "smooth" });
   };
 
   // Handle search submit
@@ -215,7 +234,7 @@ const CompanyDetail = () => {
         newCommentRating,
         newCommentMessage,
         newCommentProductName || undefined,
-        newCommentContactMethod
+        newCommentContactMethod,
       );
 
       // Reset form
@@ -228,7 +247,9 @@ const CompanyDetail = () => {
       // Refresh comments
       fetchComments();
 
-      alert("Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.");
+      alert(
+        "Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.",
+      );
     } catch (err) {
       console.error("Error submitting comment:", err);
       setSubmitError("Yorum gönderilirken bir hata oluştu.");
@@ -287,8 +308,18 @@ const CompanyDetail = () => {
                     onClick={() => setShowCommentForm(false)}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -309,7 +340,9 @@ const CompanyDetail = () => {
                         >
                           <svg
                             className="w-8 h-8"
-                            fill={star <= newCommentRating ? "#FFD700" : "#E5E7EB"}
+                            fill={
+                              star <= newCommentRating ? "#FFD700" : "#E5E7EB"
+                            }
                             viewBox="0 0 24 24"
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -340,7 +373,9 @@ const CompanyDetail = () => {
                     </label>
                     <select
                       value={newCommentContactMethod}
-                      onChange={(e) => setNewCommentContactMethod(e.target.value)}
+                      onChange={(e) =>
+                        setNewCommentContactMethod(e.target.value)
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       {CONTACT_METHODS.map((method) => (
@@ -518,10 +553,11 @@ const CompanyDetail = () => {
                                 <button
                                   key={topic}
                                   onClick={() => handleTopicClick(topic)}
-                                  className={`flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md transition-colors ${searchTerm === topic
-                                    ? "bg-purple-100 text-purple-700"
-                                    : "bg-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.08)]"
-                                    }`}
+                                  className={`flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md transition-colors ${
+                                    searchTerm === topic
+                                      ? "bg-purple-100 text-purple-700"
+                                      : "bg-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.08)]"
+                                  }`}
                                 >
                                   <span className="self-stretch my-auto">
                                     {topic}
@@ -536,10 +572,11 @@ const CompanyDetail = () => {
                             <div className="flex gap-[-1px] rounded-lg whitespace-nowrap text-sm font-normal leading-none">
                               <button
                                 onClick={() => handleSortChange("ASC")}
-                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] transition-colors ${sortOrder === "ASC"
-                                  ? "text-[#17181A] bg-white"
-                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
-                                  }`}
+                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] transition-colors ${
+                                  sortOrder === "ASC"
+                                    ? "text-[#17181A] bg-white"
+                                    : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                                }`}
                               >
                                 <span className="self-stretch my-auto">
                                   En Eski
@@ -547,10 +584,11 @@ const CompanyDetail = () => {
                               </button>
                               <button
                                 onClick={() => handleSortChange("DESC")}
-                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] transition-colors ${sortOrder === "DESC"
-                                  ? "text-[#17181A] bg-white"
-                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
-                                  }`}
+                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] transition-colors ${
+                                  sortOrder === "DESC"
+                                    ? "text-[#17181A] bg-white"
+                                    : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                                }`}
                               >
                                 <span className="self-stretch my-auto">
                                   En Yeni

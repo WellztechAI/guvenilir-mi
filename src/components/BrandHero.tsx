@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Company } from '@/types';
-import { useAuthStore } from '@/store/authStore';
-import { addFavouriteCompany, removeFavouriteCompany, refreshUser } from '@/services/authApiService';
-import { ReviewModal } from './ReviewModal';
-import { Heart } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Company } from "@/types";
+import { useAuthStore } from "@/store/authStore";
+import {
+  addFavouriteCompany,
+  removeFavouriteCompany,
+  refreshUser,
+} from "@/services/authApiService";
+import { ReviewModal } from "./ReviewModal";
+import { Heart } from "lucide-react";
 
 interface BrandHeroProps {
   company: Company;
@@ -17,15 +21,16 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
 
   useEffect(() => {
     // Check if company is in favourites (can be either objects with id or plain strings for backward compatibility)
-    const isFav = user?.favouriteCompanies?.some(fav =>
-      typeof fav === 'string' ? fav === company.id : fav.id === company.id
-    ) ?? false;
+    const isFav =
+      user?.favouriteCompanies?.some((fav) =>
+        typeof fav === "string" ? fav === company.id : fav.id === company.id,
+      ) ?? false;
     setIsFavorite(isFav);
   }, [user, company.id]);
 
   const handleFavoriteClick = async () => {
     if (!user) {
-      alert('Favorilere eklemek için giriş yapmalısınız.');
+      alert("Favorilere eklemek için giriş yapmalısınız.");
       return;
     }
 
@@ -57,11 +62,11 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
           favouriteCompanies: updatedUser.favouriteCompanies || [],
         });
       } catch (refreshError) {
-        console.error('Error refreshing user data:', refreshError);
+        console.error("Error refreshing user data:", refreshError);
       }
     } catch (error) {
-      console.error('Error updating favorites:', error);
-      alert('Favoriler güncellenirken bir hata oluştu');
+      console.error("Error updating favorites:", error);
+      alert("Favoriler güncellenirken bir hata oluştu");
     } finally {
       setIsUpdating(false);
     }
@@ -79,7 +84,10 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
         {/* Full-width hero image */}
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <img
-            src={company.imageUrl || "https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"}
+            src={
+              company.imageUrl ||
+              "https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"
+            }
             alt="Brand cover"
             className="w-full h-[300px] object-cover"
           />
@@ -89,8 +97,9 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
         <div
           className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-24"
           style={{
-            background: 'linear-gradient(180deg, #2D1B69 0%, #4C38A5 30%, #8B7BC7 60%, #FFFFFF 100%)',
-            height: '200px',
+            background:
+              "linear-gradient(180deg, #2D1B69 0%, #4C38A5 30%, #8B7BC7 60%, #FFFFFF 100%)",
+            height: "200px",
           }}
         />
 
@@ -99,11 +108,11 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
           <div
             className="rounded-3xl border overflow-hidden"
             style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              background: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              borderColor: "rgba(255, 255, 255, 0.2)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             }}
           >
             {/* Top bar with warning and button */}
@@ -114,9 +123,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                   alt="Warning icon"
                   className="aspect-[1] object-contain w-[17px] shrink-0 my-auto"
                 />
-                <div className="basis-auto">
-                  Marka Henüz Doğrulanmadı
-                </div>
+                <div className="basis-auto">Marka Henüz Doğrulanmadı</div>
               </div>
             </div>
 
@@ -150,13 +157,12 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                           />
                         </div>
                         <div className="text-xs leading-[1.4] self-center">
-                          {company.rating.toFixed(1)}({company.commentCount} Yorum)
+                          {company.rating ? company.rating.toFixed(1) : "0.0"}(
+                          {company.commentCount} Yorum)
                         </div>
                       </div>
                       <div className="flex items-stretch gap-[5px] text-xs font-normal text-center tracking-[-0.48px] leading-loose mt-3">
-                        <div className="grow">
-                          Web Sitesi{" "}
-                        </div>
+                        <div className="grow">Web Sitesi </div>
                         <img
                           src="https://api.builder.io/api/v1/image/assets/TEMP/2b28595312d2284b8382ed522b43f1d8ecb2ca64?placeholderIfAbsent=true"
                           alt="External link"
@@ -166,7 +172,8 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                     </div>
                     <div className="flex w-full flex-col text-xs mt-1 pl-20 max-md:max-w-full max-md:pl-5">
                       <p className="text-[rgba(65,65,65,1)] font-normal leading-[18px] tracking-[-0.48px] max-md:max-w-full">
-                        {company.description || 'Şirket açıklaması henüz eklenmemiş.'}
+                        {company.description ||
+                          "Şirket açıklaması henüz eklenmemiş."}
                       </p>
                       <div className="flex w-[371px] max-w-full gap-[19px] mt-4">
                         <div className="mt-[5px]">
@@ -176,7 +183,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                                 Numara
                               </div>
                               <div className="text-black font-medium leading-loose tracking-[-0.48px]">
-                                {company.phone || '-'}
+                                {company.phone || "-"}
                               </div>
                             </div>
                             <div className="flex flex-col items-stretch whitespace-nowrap">
@@ -196,7 +203,10 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                           <div className="flex w-full items-stretch gap-1.5 text-black font-medium text-center tracking-[-0.48px] leading-loose mt-2 flex-wrap">
                             {company.sectors && company.sectors.length > 0 ? (
                               company.sectors.map((sector, index) => (
-                                <span key={index} className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md">
+                                <span
+                                  key={index}
+                                  className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md"
+                                >
                                   <span className="self-stretch my-auto">
                                     {sector}
                                   </span>
@@ -233,7 +243,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                         >
                           <Heart
                             size={20}
-                            className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`}
+                            className={`transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-white"}`}
                           />
                         </button>
                       </div>

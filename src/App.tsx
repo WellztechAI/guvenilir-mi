@@ -7,6 +7,8 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CompanySignup from "./pages/CompanySignup";
+import CompanyLogin from "./pages/CompanyLogin";
+import CompanyPanel from "./pages/CompanyPanel";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import CompanyDetail from "./pages/CompanyDetail";
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/company-signup" element={<CompanySignup />} />
+            <Route path="/company-login" element={<CompanyLogin />} />
+            <Route path="/company-panel" element={<CompanyPanel />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/panel" element={<AdminPanel />} />
             <Route path="/company/:id" element={<CompanyDetail />} />
