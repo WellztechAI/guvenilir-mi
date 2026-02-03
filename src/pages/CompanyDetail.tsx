@@ -616,6 +616,7 @@ const CompanyDetail = () => {
                                 key={review.id}
                                 review={review}
                                 onLike={handleLikeComment}
+                                companyName={company?.name}
                               />
                             ))}
                           </div>
@@ -628,6 +629,7 @@ const CompanyDetail = () => {
                                   key={review.id}
                                   review={review}
                                   onLike={handleLikeComment}
+                                  companyName={company?.name}
                                 />
                               ))}
                             </div>

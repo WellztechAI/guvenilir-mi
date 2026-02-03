@@ -4,6 +4,7 @@ import { Comment } from "@/types";
 interface ReviewItemProps {
   review: Comment;
   onLike: (commentId: string) => void;
+  companyName?: string;
 }
 
 // Format date helper
@@ -18,7 +19,11 @@ const formatDate = (date: Date | string | undefined | null): string => {
   }).format(dateObj);
 };
 
-export const ReviewItem: React.FC<ReviewItemProps> = ({ review, onLike }) => {
+export const ReviewItem: React.FC<ReviewItemProps> = ({
+  review,
+  onLike,
+  companyName,
+}) => {
   return (
     <article className="w-full">
       <div className="flex w-full items-stretch gap-[40px_65px]">
@@ -64,7 +69,39 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({ review, onLike }) => {
       <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mt-10">
         {review.message}
       </p>
-      <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium mt-2 max-md:mr-[5px]">
+
+      {/* Company Answer Section */}
+      {review.answer && (
+        <div className="mt-6 bg-gray-50 rounded-lg p-4 border-l-4 border-[#7EDA48]">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-200 to-purple-300 flex items-center justify-center shrink-0">
+              <span className="text-purple-700 text-sm font-bold">
+                {(companyName || review.companyName || "Firma")
+                  .substring(0, 2)
+                  .toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="font-semibold text-gray-900 text-sm">
+                  {companyName || review.companyName || "Firma"}
+                </span>
+                <span className="text-xs text-gray-500">• Firma Cevabı</span>
+              </div>
+              <p className="text-gray-700 text-xs leading-relaxed">
+                {review.answer}
+              </p>
+              {review.answerDate && (
+                <div className="text-xs text-gray-500 mt-2">
+                  {formatDate(review.answerDate)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium mt-6 max-md:mr-[5px]">
         <button
           onClick={() => onLike(review.id)}
           className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity"

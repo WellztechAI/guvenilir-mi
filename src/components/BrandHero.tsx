@@ -72,6 +72,99 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
     }
   };
 
+  // Calculate rating for display
+  const rating = company.rating || 0;
+  const commentCount = company.commentCount || 0;
+
+  // Calculate filled boxes based on rating with decimal precision
+  // Each 0.1 increment fills 10% more of the next box
+  const getFilledBoxes = (rating: number) => {
+    // Return exact rating value for precise filling
+    return Math.min(rating, 5);
+  };
+
+  const filledBoxes = getFilledBoxes(rating);
+
+  // Rating component with Vector.svg - Left side (yellow, smaller)
+  const RatingDisplayLeft = ({ rating }: { rating: number }) => {
+    const filled = getFilledBoxes(rating);
+
+    return (
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= Math.floor(filled);
+          const isPartial = star === Math.ceil(filled) && filled % 1 !== 0;
+          const partialPercent = isPartial ? (filled % 1) * 100 : 0;
+
+          return (
+            <div
+              key={star}
+              className="w-8 h-8 rounded flex items-center justify-center relative overflow-hidden"
+              style={{
+                backgroundColor: isFilled ? "#FECE07" : "#D8D8D8",
+              }}
+            >
+              {isPartial && (
+                <div
+                  className="absolute left-0 top-0 h-full"
+                  style={{
+                    width: `${partialPercent}%`,
+                    backgroundColor: "#FECE07",
+                  }}
+                />
+              )}
+              <img
+                src="/Vector.png"
+                alt="check"
+                className="w-4 h-4 object-contain relative z-10 brightness-0 invert"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Rating component - Right side (green, medium)
+  const RatingDisplayRight = ({ rating }: { rating: number }) => {
+    const filled = getFilledBoxes(rating);
+
+    return (
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= Math.floor(filled);
+          const isPartial = star === Math.ceil(filled) && filled % 1 !== 0;
+          const partialPercent = isPartial ? (filled % 1) * 100 : 0;
+
+          return (
+            <div
+              key={star}
+              className="w-9 h-9 rounded flex items-center justify-center relative overflow-hidden"
+              style={{
+                backgroundColor: isFilled ? "#1eb478" : "#D8D8D8",
+              }}
+            >
+              {isPartial && (
+                <div
+                  className="absolute left-0 top-0 h-full"
+                  style={{
+                    width: `${partialPercent}%`,
+                    backgroundColor: "#1eb478",
+                  }}
+                />
+              )}
+              <img
+                src="/Vector.png"
+                alt="check"
+                className="w-5 h-5 object-contain relative z-10 brightness-0 invert"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <>
       <ReviewModal
@@ -103,15 +196,15 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
           }}
         />
 
-        {/* Semi-transparent container */}
+        {/* Semi-transparent container with black border */}
         <div className="max-w-[1357px] mx-auto px-4 -mt-[280px] relative z-10">
           <div
-            className="rounded-3xl border overflow-hidden"
+            className="rounded-3xl overflow-hidden"
             style={{
               background: "rgba(255, 255, 255, 0.15)",
               backdropFilter: "blur(20px)",
               WebkitBackdropFilter: "blur(20px)",
-              borderColor: "rgba(255, 255, 255, 0.2)",
+              border: "1px solid rgba(0, 0, 0, 0.8)",
               boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             }}
           >
@@ -156,9 +249,13 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                             className="aspect-[0.87] object-contain w-3.5 self-stretch shrink-0 my-auto"
                           />
                         </div>
-                        <div className="text-xs leading-[1.4] self-center">
-                          {company.rating ? company.rating.toFixed(1) : "0.0"}(
-                          {company.commentCount} Yorum)
+                        {/* Rating with Vector.svg - Left side - Only boxes */}
+                        <div className="mt-3">
+                          <RatingDisplayLeft rating={rating} />
+                        </div>
+                        <div className="text-xs leading-[1.4] mt-2 whitespace-nowrap">
+                          Toplam {commentCount} yorum üzerinden{" "}
+                          {rating.toFixed(1)} / 5 değerlendirme
                         </div>
                       </div>
                       <div className="flex items-stretch gap-[5px] text-xs font-normal text-center tracking-[-0.48px] leading-loose mt-3">
@@ -248,11 +345,46 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                         </button>
                       </div>
                     </div>
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/TEMP/53db716f911912ae379fffc5e52072bc48334d88?placeholderIfAbsent=true"
-                      alt="Brand statistics"
-                      className="aspect-[4.15] object-contain w-full shadow-[-1px_0px_5px_rgba(0,0,0,0.19)] mt-9 max-md:max-w-full"
-                    />
+
+                    {/* Rating Display Box - Right Side */}
+                    <div className="mt-9 bg-white/90 rounded-2xl p-6 shadow-lg border border-gray-200">
+                      {/* Logo, text and rating boxes in one row */}
+                      <div className="flex items-center gap-3 mb-4">
+                        {/* Logo and text */}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="relative flex items-center justify-center"
+                            style={{ width: 32, height: 32 }}
+                          >
+                            <img
+                              src="/Vector (1).png"
+                              alt=""
+                              className="absolute inset-0 w-full h-full"
+                            />
+                            <img
+                              src="/Vector.png"
+                              alt="Logo"
+                              className="relative"
+                              style={{ width: "60%", height: "60%" }}
+                            />
+                          </div>
+                          <span
+                            className="text-xl font-bold text-gray-800"
+                            style={{ fontFamily: "Metropolis, sans-serif" }}
+                          >
+                            güvenilir mi?
+                          </span>
+                        </div>
+                        {/* Rating boxes */}
+                        <RatingDisplayRight rating={rating} />
+                      </div>
+
+                      {/* Text below */}
+                      <div className="text-sm text-gray-600 whitespace-nowrap">
+                        Toplam {commentCount} yorum üzerinden{" "}
+                        {rating.toFixed(1)} / 5 değerlendirme
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
