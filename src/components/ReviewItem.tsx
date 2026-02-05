@@ -1,5 +1,6 @@
 import React from "react";
 import { Comment } from "@/types";
+import { RatingStars } from "./RatingStars";
 
 interface ReviewItemProps {
   review: Comment;
@@ -39,31 +40,15 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
           <div className="flex flex-col items-stretch">
             <div className="flex items-stretch gap-[7px] text-[26px] text-[#202023] font-semibold leading-[1.4]">
               <div className="text-[#202023]">{review.authorName}</div>
-              <img
-                src="https://api.builder.io/api/v1/image/assets/TEMP/985808fc9f99c5d1e1a76b39516ff8232cc5213c?placeholderIfAbsent=true"
-                alt="Verified"
-                className="aspect-[0.85] object-contain w-[11px] shrink-0 mt-3.5"
-              />
             </div>
-            <div className="text-[#6B6B6E] text-base font-medium mt-2 flex items-center gap-2">
-              <div className="flex">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <svg
-                    key={star}
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill={star <= review.rating ? "#FFD700" : "#E5E7EB"}
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                ))}
-              </div>
+            <div className="text-[#6B6B6E] text-base font-medium mt-2">
+              {formatDate(review.date)}
+            </div>
+            {/* Rating Stars */}
+            <div className="mt-2">
+              <RatingStars rating={review.rating} size="small" />
             </div>
           </div>
-        </div>
-        <div className="text-[#6B6B6E] text-[13px] font-medium my-auto">
-          {formatDate(review.date)}
         </div>
       </div>
       <p className="text-[rgba(65,65,65,1)] text-xs font-normal leading-[18px] tracking-[-0.48px] mt-11 max-md:mt-10">
@@ -101,18 +86,46 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
         </div>
       )}
 
-      <div className="flex w-full gap-5 text-[9px] text-[#6B6B6E] font-medium mt-6 max-md:mr-[5px]">
+      <div className="flex w-full gap-5 text-sm text-[#6B6B6E] font-medium mt-6 max-md:mr-[5px]">
         <button
           onClick={() => onLike(review.id)}
-          className="flex items-stretch gap-[5px] hover:opacity-70 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
         >
-          <img
-            src="https://api.builder.io/api/v1/image/assets/TEMP/07dc1f4467d8862ae84366171051235f3f317d39?placeholderIfAbsent=true"
-            alt="Helpful"
-            className="aspect-[1] object-contain w-3.5 shrink-0"
-          />
-          <span className="text-[#6B6B6E]">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+          </svg>
+          <span className="text-[#6B6B6E] font-medium">
             Yararlı <span className="font-semibold">{review.likesCount}</span>
+          </span>
+        </button>
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span className="text-[#6B6B6E] font-medium">
+            Paylaş
           </span>
         </button>
       </div>
