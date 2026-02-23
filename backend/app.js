@@ -53,6 +53,7 @@ app.use('/api/companies', require('./routes/companies'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/verifications', require('./routes/verifications'));
+app.use('/api/upload', require('./routes/upload'));
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
