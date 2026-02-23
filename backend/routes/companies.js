@@ -2,8 +2,23 @@
 
 const express = require('express');
 const pool = require('../db');
+const redisClient = require('../redis');
 
 const router = express.Router();
+
+// ============================================
+// Cache Helper
+// ============================================
+async function clearCompanyCaches(id, slug) {
+    try {
+        if (id) await redisClient.del(`company:id:${id}`);
+        if (slug) await redisClient.del(`company:slug:${slug}`);
+        const keys = await redisClient.keys('companies:*');
+        if (keys.length > 0) await redisClient.del(keys);
+    } catch (err) {
+        console.error('[REDIS] Cache clear hatası:', err.message);
+    }
+}
 
 // ============================================
 // Helper
@@ -27,6 +42,16 @@ function buildCompanyResponse(row) {
 // GET /api/companies — tüm şirketler
 router.get('/', async (req, res) => {
     const { status, sector, sort = 'created_at', order = 'DESC', limit = 20, offset = 0 } = req.query;
+
+    // Redis Cache Kontrolü
+    const cacheKey = `companies:list:${status || 'all'}:${sector || 'all'}:${sort}:${order}:${limit}:${offset}`;
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) {
+        console.warn('[REDIS] Cache okuma hatası:', err.message);
+    }
+
     const allowedSort = ['created_at', 'rating', 'comment_count', 'name'];
     const safeSort = allowedSort.includes(sort) ? sort : 'created_at';
     const safeOrder = order === 'ASC' ? 'ASC' : 'DESC';
@@ -49,10 +74,19 @@ router.get('/', async (req, res) => {
             params
         );
 
-        return res.json({
+        const responseData = {
             data: result.rows.map(buildCompanyResponse),
             pagination: { total, limit: parseInt(limit), offset: parseInt(offset), page: Math.floor(offset / limit) + 1, totalPages: Math.ceil(total / limit) },
-        });
+        };
+
+        // Cache'e yaz (300 saniye / 5 dk)
+        try {
+            await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 300 });
+        } catch (err) {
+            console.warn('[REDIS] Cache yazma hatası:', err.message);
+        }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[COMPANIES] fetchAll hatası:', err.message);
         return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -61,10 +95,20 @@ router.get('/', async (req, res) => {
 
 // GET /api/companies/id/:id — ID ile şirket
 router.get('/id/:id', async (req, res) => {
+    const cacheKey = `company:id:${req.params.id}`;
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) { }
+
     try {
         const result = await pool.query('SELECT * FROM companies WHERE id = $1', [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Şirket bulunamadı.' });
-        return res.json({ data: buildCompanyResponse(result.rows[0]) });
+
+        const responseData = { data: buildCompanyResponse(result.rows[0]) };
+        try { await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 3600 }); } catch (e) { }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[COMPANIES] fetchById hatası:', err.message);
         return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -73,10 +117,20 @@ router.get('/id/:id', async (req, res) => {
 
 // GET /api/companies/:slug — slug ile şirket
 router.get('/:slug', async (req, res) => {
+    const cacheKey = `company:slug:${req.params.slug}`;
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) { }
+
     try {
         const result = await pool.query('SELECT * FROM companies WHERE slug = $1', [req.params.slug]);
         if (result.rows.length === 0) return res.status(404).json({ error: 'Şirket bulunamadı.' });
-        return res.json({ data: buildCompanyResponse(result.rows[0]) });
+
+        const responseData = { data: buildCompanyResponse(result.rows[0]) };
+        try { await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 3600 }); } catch (e) { }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[COMPANIES] fetchBySlug hatası:', err.message);
         return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -95,6 +149,10 @@ router.post('/', async (req, res) => {
              RETURNING *`,
             [name, slug, description || null, phone || null, sectors || []]
         );
+
+        // Cache temizle
+        await clearCompanyCaches(result.rows[0].id, slug);
+
         return res.status(201).json(buildCompanyResponse(result.rows[0]));
     } catch (err) {
         if (err.code === '23505') return res.status(409).json({ error: 'Bu slug zaten kullanımda.' });
@@ -123,6 +181,10 @@ router.put('/:id', async (req, res) => {
         );
 
         if (result.rows.length === 0) return res.status(404).json({ error: 'Şirket bulunamadı.' });
+
+        // Cache temizle (slug yok ama id ve list keyleri silinir)
+        await clearCompanyCaches(req.params.id, null);
+
         return res.json({ success: true });
     } catch (err) {
         console.error('[COMPANIES] update hatası:', err.message);

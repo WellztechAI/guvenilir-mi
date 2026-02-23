@@ -2,6 +2,7 @@
 
 const express = require('express');
 const pool = require('../db');
+const redisClient = require('../redis');
 
 const router = express.Router();
 
@@ -13,6 +14,12 @@ router.get('/', async (req, res) => {
     }
 
     const searchTerm = `%${q.trim()}%`;
+    const cacheKey = `search:global:${q.trim().toLowerCase()}:${limit}`;
+
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) { }
 
     try {
         const [companyResult, commentResult] = await Promise.all([
@@ -33,7 +40,7 @@ router.get('/', async (req, res) => {
             ),
         ]);
 
-        return res.json({
+        const responseData = {
             companies: companyResult.rows.map(r => ({
                 id: r.id, name: r.name, slug: r.slug, description: r.description || '',
                 image_url: r.image_url, status: r.status,
@@ -42,7 +49,11 @@ router.get('/', async (req, res) => {
                 sectors: r.sectors || [], created_at: r.created_at,
             })),
             comments: commentResult.rows,
-        });
+        };
+
+        try { await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 300 }); } catch (e) { }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[SEARCH] global hatası:', err.message);
         return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -55,6 +66,12 @@ router.get('/companies', async (req, res) => {
     if (!q || q.trim().length < 1) {
         return res.json({ data: [], pagination: { total: 0, limit: parseInt(limit), offset: parseInt(offset), page: 1, totalPages: 0 } });
     }
+
+    const cacheKey = `search:companies:${q.trim().toLowerCase()}:${sector || 'all'}:${status || 'all'}:${limit}:${offset}`;
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) { }
 
     const searchTerm = `%${q.trim()}%`;
     const params = [searchTerm];
@@ -75,7 +92,7 @@ router.get('/companies', async (req, res) => {
             params
         );
 
-        return res.json({
+        const responseData = {
             data: result.rows.map(r => ({
                 id: r.id, name: r.name, slug: r.slug, description: r.description || '',
                 image_url: r.image_url, status: r.status,
@@ -84,7 +101,11 @@ router.get('/companies', async (req, res) => {
                 sectors: r.sectors || [], created_at: r.created_at,
             })),
             pagination: { total, limit: parseInt(limit), offset: parseInt(offset), page: Math.floor(offset / limit) + 1, totalPages: Math.ceil(total / limit) },
-        });
+        };
+
+        try { await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 300 }); } catch (e) { }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[SEARCH] companies hatası:', err.message);
         return res.status(500).json({ error: 'Sunucu hatası.' });
@@ -96,6 +117,12 @@ router.get('/suggest', async (req, res) => {
     const { q } = req.query;
     if (!q || q.trim().length < 1) return res.json({ suggestions: [] });
 
+    const cacheKey = `search:suggest:${q.trim().toLowerCase()}`;
+    try {
+        const cachedData = await redisClient.get(cacheKey);
+        if (cachedData) return res.json(JSON.parse(cachedData));
+    } catch (err) { }
+
     try {
         const result = await pool.query(
             `SELECT id, name, slug, rating FROM companies
@@ -104,12 +131,16 @@ router.get('/suggest', async (req, res) => {
             [`%${q.trim()}%`]
         );
 
-        return res.json({
+        const responseData = {
             suggestions: result.rows.map(r => ({
                 id: r.id, name: r.name, slug: r.slug,
                 rating: r.rating ? parseFloat(r.rating) : null,
             })),
-        });
+        };
+
+        try { await redisClient.set(cacheKey, JSON.stringify(responseData), { EX: 600 }); } catch (e) { }
+
+        return res.json(responseData);
     } catch (err) {
         console.error('[SEARCH] suggest hatası:', err.message);
         return res.status(500).json({ suggestions: [] });
