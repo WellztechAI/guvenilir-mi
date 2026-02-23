@@ -1,0 +1,22 @@
+{
+    "name": "guvenilir-mi-backend",
+    "version": "1.0.0",
+    "description": "Güvenilir Mi? - Node.js backend with AWS Cognito OIDC authentication",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "nodemon app.js"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "ejs": "^3.1.10",
+        "express": "^4.21.1",
+        "express-session": "^1.18.1",
+        "openid-client": "^5.7.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.0"
+    }
+}

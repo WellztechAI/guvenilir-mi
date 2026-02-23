@@ -18,6 +18,7 @@ import CommentPolicy from "./pages/CommentPolicy";
 import CommunityRules from "./pages/CommunityRules";
 import BrandArea from "./pages/BrandArea";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/yorum-politikasi" element={<CommentPolicy />} />
             <Route path="/topluluk-kurallari" element={<CommunityRules />} />
             <Route path="/marka-alani" element={<BrandArea />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
