@@ -1,0 +1,31 @@
+## 2026-03-02 - Frontend Deployment Hazırlığı (Dockerize)
+
+- Durum: tamamlandı
+- Branch: emirhan
+- Commit(ler):
+  - 584e976 - feat: add frontend docker and deployment configurations
+- Amaç: Frontend uygulamasını (Vite + React) AWS EC2 üzerinde çalışabilecek şekilde dockerize etmek ve deployment script'ini hazırlamak.
+- Yapılanlar:
+  - Backend `guvenilir-mi-docker` projesi incelendi ve oradaki `docker-compose` tabanlı mantık uyarlandı.
+  - Multi-stage build içeren bir `Dockerfile` yazıldı (Önce Node.js ile build, sonra Nginx ile sunum).
+  - SPA (Single Page Application) routing için `.htaccess` muadili `nginx.conf` dosyası eklendi (Sayfa yenilemelerinde 404 dönmemesi için).
+  - AWS EC2 üzerinde ayağa kaldırmayı kolaylaştırmak için `deploy.sh` script'i eklendi.
+  - Deployment için gerekli çevre değişkenlerinin örneğini içeren `.env.production.example` dosyası eklendi.
+- Değişen dosyalar:
+  - `Dockerfile` (YENİ)
+  - `nginx.conf` (YENİ)
+  - `docker-compose.yml` (YENİ)
+  - `deploy.sh` (YENİ)
+  - `.env.production.example` (YENİ)
+- Kararlar / Varsayımlar:
+  - Frontend, backend ile aynı Nginx yapısını kullanması için izole edildi ama aynı EC2 veya farklı EC2 üzerinde tek bir komutla (`./deploy.sh`) ayağa kaldırılabilecek şekilde tasarlandı.
+- Test / Verify:
+  - Dosyalar `emirhan` branch'ine commit'lendi.
+  - Local makinede Docker yüklü olmadığı için tam `docker build` testi AWS üzerinde yapılacak.
+- Riskler / Regression:
+  - Frontend EC2'ye yüklendiğinde `VITE_API_BASE_URL` gibi değerlerin build sırasında `.env` içerisinden okunması gerekiyor. Bu nedenle `deploy.sh` scripti `.env.production` dosyasını build öncesi .env'ye kopyalıyor.
+- Sonraki adım:
+  - Kodları GitHub'a pushlamak (`git push origin emirhan`).
+  - EC2 instance'ına kodu kopyalayıp (veya clone'layıp) `.env.production` dosyasını doldurarak `./deploy.sh` komutunu çalıştırmak.
+- Unutmama özeti:
+  - Frontend dockerize edildi. EC2 üzerinde `.env.production` dosyasını doldurmak ve script'i çalıştırmak kaldı.
