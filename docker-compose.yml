@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: guvenilir_mi_frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    # If using environment variables that Vite injects, they need to be present at build time!
+    # A standard way in CI/CD is passing them as build arguments, or using a .env file locally 
+    # before running `docker compose up --build`.
