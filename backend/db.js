@@ -1,6 +1,28 @@
 'use strict';
 
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+
+// ============================================
+// SSL Sertifikası (AWS RDS global-bundle)
+// ============================================
+let sslConfig;
+const certPath = process.env.DB_SSL_CERT
+    ? path.resolve(__dirname, process.env.DB_SSL_CERT)
+    : path.resolve(__dirname, 'certs/global-bundle.pem');
+
+if (fs.existsSync(certPath)) {
+    sslConfig = {
+        rejectUnauthorized: true,
+        ca: fs.readFileSync(certPath).toString(),
+    };
+    console.log('[DB] SSL sertifikası yüklendi:', certPath);
+} else {
+    // Sertifika yoksa basit SSL (geliştirme ortamı)
+    console.warn('[DB] SSL sertifikası bulunamadı, rejectUnauthorized=false kullanılıyor.');
+    sslConfig = { rejectUnauthorized: false };
+}
 
 // ============================================
 // PostgreSQL Connection Pool
@@ -11,9 +33,7 @@ const pool = new Pool({
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    // SSL — AWS RDS'de zorunlu
-    ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false },
-    // Connection pool config
+    ssl: sslConfig,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
@@ -22,16 +42,18 @@ const pool = new Pool({
 // Startup bağlantı testi
 pool.connect((err, client, release) => {
     if (err) {
-        console.error('[DB] Bağlantı hatası:', err.message);
-        console.error('[DB] DB_HOST:', process.env.DB_HOST);
+        console.error('[DB] ❌ Bağlantı hatası:', err.message);
+        console.error('[DB]    Host:', process.env.DB_HOST);
+        console.error('[DB]    DB  :', process.env.DB_NAME);
+        console.error('[DB]    User:', process.env.DB_USER);
         return;
     }
     release();
-    console.log(`[DB] PostgreSQL bağlantısı başarılı → ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+    console.log(`[DB] ✅ PostgreSQL bağlandı → ${process.env.DB_HOST}/${process.env.DB_NAME}`);
 });
 
 pool.on('error', (err) => {
-    console.error('[DB] Pool beklenmedik hata:', err.message);
+    console.error('[DB] Pool hatası:', err.message);
 });
 
 module.exports = pool;
