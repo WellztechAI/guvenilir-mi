@@ -97,48 +97,52 @@ const AdminPanel = () => {
     }
   };
 
-  const handleApproveComment = async (commentId: string) => {
+  const handleCommentAction = async (
+    action: () => Promise<void>,
+    commentId: string,
+    successMsg: string,
+    errorMsg: string
+  ) => {
     setIsUpdatingComment(true);
     try {
-      await approveComment(commentId);
-      await loadComments();
+      await action();
+      // Close modal and remove from UI immediately on success
       setSelectedComment(null);
+      setPendingComments(prev => prev.filter(c => c.id !== commentId));
+      // Refresh list in background — don't block or show error if this fails
+      loadComments().catch(err => console.warn('List refresh failed after action:', err));
     } catch (error) {
-      console.error('Error approving comment:', error);
-      alert('Yorum onaylanırken bir hata oluştu');
+      console.error(errorMsg, error);
+      alert(errorMsg);
     } finally {
       setIsUpdatingComment(false);
     }
   };
 
-  const handleRejectComment = async (commentId: string) => {
-    setIsUpdatingComment(true);
-    try {
-      await rejectComment(commentId);
-      await loadComments();
-      setSelectedComment(null);
-    } catch (error) {
-      console.error('Error rejecting comment:', error);
-      alert('Yorum reddedilirken bir hata oluştu');
-    } finally {
-      setIsUpdatingComment(false);
-    }
-  };
+  const handleApproveComment = (commentId: string) =>
+    handleCommentAction(
+      () => approveComment(commentId),
+      commentId,
+      'Yorum onaylandı ✅',
+      'Yorum onaylanırken bir hata oluştu. Lütfen tekrar deneyin.'
+    );
+
+  const handleRejectComment = (commentId: string) =>
+    handleCommentAction(
+      () => rejectComment(commentId),
+      commentId,
+      'Yorum reddedildi',
+      'Yorum reddedilirken bir hata oluştu. Lütfen tekrar deneyin.'
+    );
 
   const handleDeleteComment = async (commentId: string) => {
     if (!confirm('Bu yorumu silmek istediğinizden emin misiniz?')) return;
-
-    setIsUpdatingComment(true);
-    try {
-      await deleteComment(commentId);
-      await loadComments();
-      setSelectedComment(null);
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      alert('Yorum silinirken bir hata oluştu');
-    } finally {
-      setIsUpdatingComment(false);
-    }
+    handleCommentAction(
+      () => deleteComment(commentId),
+      commentId,
+      'Yorum silindi',
+      'Yorum silinirken bir hata oluştu. Lütfen tekrar deneyin.'
+    );
   };
 
   // ============================================
