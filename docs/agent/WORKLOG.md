@@ -1,31 +1,16 @@
-## 2026-03-02 - Frontend Deployment Hazırlığı (Dockerize)
+## 2026-03-03 - API ve Backend Bağlantılarının Analizi
 
 - Durum: tamamlandı
 - Branch: emirhan
-- Commit(ler):
-  - 584e976 - feat: add frontend docker and deployment configurations
-- Amaç: Frontend uygulamasını (Vite + React) AWS EC2 üzerinde çalışabilecek şekilde dockerize etmek ve deployment script'ini hazırlamak.
+- Amaç: Frontend uygulamasının (Guvenilir Mi) AWS EC2 üzerindeki 'guvenilir-mi-docker' backend'ine, veritabanlarına (PostgreSQL, Redis) ve Cognito'ya tam olarak bağlanıp bağlanmadığını kontrol etmek ve gerekiyorsa entegre etmek.
 - Yapılanlar:
-  - Backend `guvenilir-mi-docker` projesi incelendi ve oradaki `docker-compose` tabanlı mantık uyarlandı.
-  - Multi-stage build içeren bir `Dockerfile` yazıldı (Önce Node.js ile build, sonra Nginx ile sunum).
-  - SPA (Single Page Application) routing için `.htaccess` muadili `nginx.conf` dosyası eklendi (Sayfa yenilemelerinde 404 dönmemesi için).
-  - AWS EC2 üzerinde ayağa kaldırmayı kolaylaştırmak için `deploy.sh` script'i eklendi.
-  - Deployment için gerekli çevre değişkenlerinin örneğini içeren `.env.production.example` dosyası eklendi.
-- Değişen dosyalar:
-  - `Dockerfile` (YENİ)
-  - `nginx.conf` (YENİ)
-  - `docker-compose.yml` (YENİ)
-  - `deploy.sh` (YENİ)
-  - `.env.production.example` (YENİ)
+  - `src/services/*` içerisindeki tüm API erişim fonksiyonları (`companyService`, `commentService`, `userService`, `adminService`, `authApiService`) denetlendi.
+  - `src/lib/cognito.ts` dosyasındaki AWS Cognito OAuth2 Hosted UI mantığı kontrol edildi.
+  - Kod bloklarının zaten `api.ts` isimli genel bir HTTP client (fetch wrapper) ile `VITE_API_BASE_URL` adresinden `/api/...` endpointlerine gittiği ve mock dataların projede bulunmadığı tespit edildi.
 - Kararlar / Varsayımlar:
-  - Frontend, backend ile aynı Nginx yapısını kullanması için izole edildi ama aynı EC2 veya farklı EC2 üzerinde tek bir komutla (`./deploy.sh`) ayağa kaldırılabilecek şekilde tasarlandı.
+  - Frontend uygulamasının kodsal olarak backend (Node.js/PostgreSQL/Redis) entegrasyonu tamamen hazırlanmıştır. 
+  - Yalnızca EC2 sunucusu üzerindeki `.env.production` dosyasının, çalışan AWS servislerine göre yapılandırılması (`VITE_API_BASE_URL` = `http://18.192.128.211:3000` ve Cognito Client ID/Domain bilgileri vb.) bağlantının sağlanması için yeterlidir.
 - Test / Verify:
-  - Dosyalar `emirhan` branch'ine commit'lendi.
-  - Local makinede Docker yüklü olmadığı için tam `docker build` testi AWS üzerinde yapılacak.
-- Riskler / Regression:
-  - Frontend EC2'ye yüklendiğinde `VITE_API_BASE_URL` gibi değerlerin build sırasında `.env` içerisinden okunması gerekiyor. Bu nedenle `deploy.sh` scripti `.env.production` dosyasını build öncesi .env'ye kopyalıyor.
+  - Local bilgisayarda hiçbir ekstra geliştirme yapılmadan `build` alındığı için ortam değişkenleri haricinde kod deplasa hazır durumdadır.
 - Sonraki adım:
-  - Kodları GitHub'a pushlamak (`git push origin emirhan`).
-  - EC2 instance'ına kodu kopyalayıp (veya clone'layıp) `.env.production` dosyasını doldurarak `./deploy.sh` komutunu çalıştırmak.
-- Unutmama özeti:
-  - Frontend dockerize edildi. EC2 üzerinde `.env.production` dosyasını doldurmak ve script'i çalıştırmak kaldı.
+  - Kullanıcının AWS Cognito tarafında User Pool oluşturması ve ayarlarını (Client ID, Domain) EC2'nin `.env.production` dosyasına aktararak siteyi yayına alması beklenmektedir.
