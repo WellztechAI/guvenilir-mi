@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Güvenilir Mi? — Cognito Auth Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 0 24px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        h1 { color: #2d1b69; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        }
+        pre {
+            background: #f0f0f5;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        a.btn {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 10px 24px;
+            background: #2d1b69;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        a.btn.logout {
+            background: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Güvenilir Mi? — AWS Cognito Demo</h1>
+
+    <% if (isAuthenticated) { %>
+        <div class="card">
+            <h2>Hoş geldin, <%= userInfo.username || userInfo.email || userInfo.sub %> 👋</h2>
+            <p>Cognito'dan gelen kullanıcı bilgileri:</p>
+            <pre><%= JSON.stringify(userInfo, null, 2) %></pre>
+            <a href="/logout" class="btn logout">Çıkış Yap</a>
+        </div>
+    <% } else { %>
+        <div class="card">
+            <p>Bu sayfa AWS Cognito OIDC entegrasyonunu test etmek için kullanılır.</p>
+            <a href="/login" class="btn">Cognito ile Giriş Yap</a>
+        </div>
+    <% } %>
+</body>
+</html>

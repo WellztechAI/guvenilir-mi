@@ -178,7 +178,7 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, compa
                                         </div>
                                     </div>
                                     <span className="text-xs font-medium text-gray-600">
-                                        {company.rating.toFixed(1)} ({company.commentCount} Yorum)
+                                        {company.rating != null ? company.rating.toFixed(1) : '-'} ({company.commentCount} Yorum)
                                     </span>
                                 </div>
                             </div>

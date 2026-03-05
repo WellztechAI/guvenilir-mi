@@ -150,7 +150,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                           />
                         </div>
                         <div className="text-xs leading-[1.4] self-center">
-                          {company.rating.toFixed(1)}({company.commentCount} Yorum)
+                          {company.rating != null ? company.rating.toFixed(1) : '-'} ({company.commentCount} Yorum)
                         </div>
                       </div>
                       <div className="flex items-stretch gap-[5px] text-xs font-normal text-center tracking-[-0.48px] leading-loose mt-3">

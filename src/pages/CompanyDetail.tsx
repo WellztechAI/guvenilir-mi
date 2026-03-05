@@ -65,38 +65,38 @@ const CompanyDetail = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Fetch company data
-  useEffect(() => {
-    const loadCompany = async () => {
-      if (!companyIdentifier) {
+  // Fetch company data (useCallback so it can be called after comment submission too)
+  const loadCompany = useCallback(async (showLoadingSpinner = true) => {
+    if (!companyIdentifier) {
+      setError("Şirket bulunamadı");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      if (showLoadingSpinner) setIsLoading(true);
+      const companyData = isUUID(companyIdentifier)
+        ? await fetchCompany(companyIdentifier)
+        : await fetchCompanyBySlug(companyIdentifier);
+
+      if (!companyData) {
         setError("Şirket bulunamadı");
         setIsLoading(false);
         return;
       }
 
-      try {
-        setIsLoading(true);
-        const companyData = isUUID(companyIdentifier)
-          ? await fetchCompany(companyIdentifier)
-          : await fetchCompanyBySlug(companyIdentifier);
-
-        if (!companyData) {
-          setError("Şirket bulunamadı");
-          setIsLoading(false);
-          return;
-        }
-
-        setCompany(companyData);
-      } catch (err) {
-        console.error("Error fetching company:", err);
-        setError("Şirket bilgileri yüklenirken bir hata oluştu");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadCompany();
+      setCompany(companyData);
+    } catch (err) {
+      console.error("Error fetching company:", err);
+      setError("Şirket bilgileri yüklenirken bir hata oluştu");
+    } finally {
+      if (showLoadingSpinner) setIsLoading(false);
+    }
   }, [companyIdentifier]);
+
+  useEffect(() => {
+    loadCompany();
+  }, [loadCompany]);
 
   // Fetch comments with filters and pagination
   const fetchComments = useCallback(async (page: number = currentPage) => {
@@ -225,8 +225,9 @@ const CompanyDetail = () => {
       setNewCommentContactMethod("website");
       setShowCommentForm(false);
 
-      // Refresh comments
+      // Refresh both comments and company data (rating/count may have changed)
       fetchComments();
+      loadCompany(false);
 
       alert("Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.");
     } catch (err) {
