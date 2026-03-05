@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Company } from '@/types';
-import { useAuthStore } from '@/store/authStore';
-import { addFavouriteCompany, removeFavouriteCompany, refreshUser } from '@/services/authApiService';
-import { ReviewModal } from './ReviewModal';
-import { Heart } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Company } from "@/types";
+import { useAuthStore } from "@/store/authStore";
+import {
+  addFavouriteCompany,
+  removeFavouriteCompany,
+  refreshUser,
+} from "@/services/authApiService";
+import { ReviewModal } from "./ReviewModal";
+import { Heart } from "lucide-react";
 
 interface BrandHeroProps {
   company: Company;
@@ -17,15 +21,16 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
 
   useEffect(() => {
     // Check if company is in favourites (can be either objects with id or plain strings for backward compatibility)
-    const isFav = user?.favouriteCompanies?.some(fav =>
-      typeof fav === 'string' ? fav === company.id : fav.id === company.id
-    ) ?? false;
+    const isFav =
+      user?.favouriteCompanies?.some((fav) =>
+        typeof fav === "string" ? fav === company.id : fav.id === company.id,
+      ) ?? false;
     setIsFavorite(isFav);
   }, [user, company.id]);
 
   const handleFavoriteClick = async () => {
     if (!user) {
-      alert('Favorilere eklemek için giriş yapmalısınız.');
+      alert("Favorilere eklemek için giriş yapmalısınız.");
       return;
     }
 
@@ -57,14 +62,107 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
           favouriteCompanies: updatedUser.favouriteCompanies || [],
         });
       } catch (refreshError) {
-        console.error('Error refreshing user data:', refreshError);
+        console.error("Error refreshing user data:", refreshError);
       }
     } catch (error) {
-      console.error('Error updating favorites:', error);
-      alert('Favoriler güncellenirken bir hata oluştu');
+      console.error("Error updating favorites:", error);
+      alert("Favoriler güncellenirken bir hata oluştu");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  // Calculate rating for display
+  const rating = company.rating || 0;
+  const commentCount = company.commentCount || 0;
+
+  // Calculate filled boxes based on rating with decimal precision
+  // Each 0.1 increment fills 10% more of the next box
+  const getFilledBoxes = (rating: number) => {
+    // Return exact rating value for precise filling
+    return Math.min(rating, 5);
+  };
+
+  const filledBoxes = getFilledBoxes(rating);
+
+  // Rating component with Vector.svg - Left side (yellow, smaller)
+  const RatingDisplayLeft = ({ rating }: { rating: number }) => {
+    const filled = getFilledBoxes(rating);
+
+    return (
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= Math.floor(filled);
+          const isPartial = star === Math.ceil(filled) && filled % 1 !== 0;
+          const partialPercent = isPartial ? (filled % 1) * 100 : 0;
+
+          return (
+            <div
+              key={star}
+              className="w-8 h-8 rounded flex items-center justify-center relative overflow-hidden"
+              style={{
+                backgroundColor: isFilled ? "#FECE07" : "#D8D8D8",
+              }}
+            >
+              {isPartial && (
+                <div
+                  className="absolute left-0 top-0 h-full"
+                  style={{
+                    width: `${partialPercent}%`,
+                    backgroundColor: "#FECE07",
+                  }}
+                />
+              )}
+              <img
+                src="/Vector.png"
+                alt="check"
+                className="w-4 h-4 object-contain relative z-10 brightness-0 invert"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Rating component - Right side (green, medium)
+  const RatingDisplayRight = ({ rating }: { rating: number }) => {
+    const filled = getFilledBoxes(rating);
+
+    return (
+      <div className="flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = star <= Math.floor(filled);
+          const isPartial = star === Math.ceil(filled) && filled % 1 !== 0;
+          const partialPercent = isPartial ? (filled % 1) * 100 : 0;
+
+          return (
+            <div
+              key={star}
+              className="w-9 h-9 rounded flex items-center justify-center relative overflow-hidden"
+              style={{
+                backgroundColor: isFilled ? "#1eb478" : "#D8D8D8",
+              }}
+            >
+              {isPartial && (
+                <div
+                  className="absolute left-0 top-0 h-full"
+                  style={{
+                    width: `${partialPercent}%`,
+                    backgroundColor: "#1eb478",
+                  }}
+                />
+              )}
+              <img
+                src="/Vector.png"
+                alt="check"
+                className="w-5 h-5 object-contain relative z-10 brightness-0 invert"
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -79,7 +177,10 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
         {/* Full-width hero image */}
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <img
-            src={company.imageUrl || "https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"}
+            src={
+              company.imageUrl ||
+              "https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"
+            }
             alt="Brand cover"
             className="w-full h-[300px] object-cover"
           />
@@ -89,21 +190,22 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
         <div
           className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] -mt-24"
           style={{
-            background: 'linear-gradient(180deg, #2D1B69 0%, #4C38A5 30%, #8B7BC7 60%, #FFFFFF 100%)',
-            height: '200px',
+            background:
+              "linear-gradient(180deg, #2D1B69 0%, #4C38A5 30%, #8B7BC7 60%, #FFFFFF 100%)",
+            height: "200px",
           }}
         />
 
-        {/* Semi-transparent container */}
+        {/* Semi-transparent container with black border */}
         <div className="max-w-[1357px] mx-auto px-4 -mt-[280px] relative z-10">
           <div
-            className="rounded-3xl border overflow-hidden"
+            className="rounded-3xl overflow-hidden"
             style={{
-              background: 'rgba(255, 255, 255, 0.15)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              borderColor: 'rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+              background: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(20px)",
+              WebkitBackdropFilter: "blur(20px)",
+              border: "1px solid rgba(0, 0, 0, 0.8)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
             }}
           >
             {/* Top bar with warning and button */}
@@ -114,9 +216,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                   alt="Warning icon"
                   className="aspect-[1] object-contain w-[17px] shrink-0 my-auto"
                 />
-                <div className="basis-auto">
-                  Marka Henüz Doğrulanmadı
-                </div>
+                <div className="basis-auto">Marka Henüz Doğrulanmadı</div>
               </div>
             </div>
 
@@ -154,9 +254,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                         </div>
                       </div>
                       <div className="flex items-stretch gap-[5px] text-xs font-normal text-center tracking-[-0.48px] leading-loose mt-3">
-                        <div className="grow">
-                          Web Sitesi{" "}
-                        </div>
+                        <div className="grow">Web Sitesi </div>
                         <img
                           src="https://api.builder.io/api/v1/image/assets/TEMP/2b28595312d2284b8382ed522b43f1d8ecb2ca64?placeholderIfAbsent=true"
                           alt="External link"
@@ -166,7 +264,8 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                     </div>
                     <div className="flex w-full flex-col text-xs mt-1 pl-20 max-md:max-w-full max-md:pl-5">
                       <p className="text-[rgba(65,65,65,1)] font-normal leading-[18px] tracking-[-0.48px] max-md:max-w-full">
-                        {company.description || 'Şirket açıklaması henüz eklenmemiş.'}
+                        {company.description ||
+                          "Şirket açıklaması henüz eklenmemiş."}
                       </p>
                       <div className="flex w-[371px] max-w-full gap-[19px] mt-4">
                         <div className="mt-[5px]">
@@ -176,7 +275,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                                 Numara
                               </div>
                               <div className="text-black font-medium leading-loose tracking-[-0.48px]">
-                                {company.phone || '-'}
+                                {company.phone || "-"}
                               </div>
                             </div>
                             <div className="flex flex-col items-stretch whitespace-nowrap">
@@ -196,7 +295,10 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                           <div className="flex w-full items-stretch gap-1.5 text-black font-medium text-center tracking-[-0.48px] leading-loose mt-2 flex-wrap">
                             {company.sectors && company.sectors.length > 0 ? (
                               company.sectors.map((sector, index) => (
-                                <span key={index} className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md">
+                                <span
+                                  key={index}
+                                  className="bg-[rgba(0,0,0,0.04)] flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md"
+                                >
                                   <span className="self-stretch my-auto">
                                     {sector}
                                   </span>
@@ -233,16 +335,51 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                         >
                           <Heart
                             size={20}
-                            className={`transition-colors ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`}
+                            className={`transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-white"}`}
                           />
                         </button>
                       </div>
                     </div>
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/TEMP/53db716f911912ae379fffc5e52072bc48334d88?placeholderIfAbsent=true"
-                      alt="Brand statistics"
-                      className="aspect-[4.15] object-contain w-full shadow-[-1px_0px_5px_rgba(0,0,0,0.19)] mt-9 max-md:max-w-full"
-                    />
+
+                    {/* Rating Display Box - Right Side */}
+                    <div className="mt-9 bg-white/90 rounded-2xl p-6 shadow-lg border border-gray-200">
+                      {/* Logo, text and rating boxes in one row */}
+                      <div className="flex items-center gap-3 mb-4">
+                        {/* Logo and text */}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="relative flex items-center justify-center"
+                            style={{ width: 32, height: 32 }}
+                          >
+                            <img
+                              src="/Vector (1).png"
+                              alt=""
+                              className="absolute inset-0 w-full h-full"
+                            />
+                            <img
+                              src="/Vector.png"
+                              alt="Logo"
+                              className="relative"
+                              style={{ width: "60%", height: "60%" }}
+                            />
+                          </div>
+                          <span
+                            className="text-xl font-bold text-gray-800"
+                            style={{ fontFamily: "Metropolis, sans-serif" }}
+                          >
+                            güvenilir mi?
+                          </span>
+                        </div>
+                        {/* Rating boxes */}
+                        <RatingDisplayRight rating={rating} />
+                      </div>
+
+                      {/* Text below */}
+                      <div className="text-sm text-gray-600 whitespace-nowrap">
+                        Toplam {commentCount} yorum üzerinden{" "}
+                        {rating.toFixed(1)} / 5 değerlendirme
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

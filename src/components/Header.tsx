@@ -372,6 +372,27 @@ export const Header: React.FC = () => {
               Giriş Yap/Kayıt Ol
             </button>
 
+            {/* Blog Yaz button */}
+            <button
+              onClick={() => navigate('/blog-editor')}
+              className="flex items-center justify-center text-white"
+              style={{
+                height: '44px',
+                paddingTop: '10px',
+                paddingBottom: '10px',
+                paddingLeft: '16px',
+                paddingRight: '16px',
+                borderRadius: '22px',
+                backgroundColor: '#3B82F6',
+                fontFamily: 'Metropolis, sans-serif',
+                fontWeight: 600,
+                fontSize: '14px',
+                lineHeight: '150%',
+              }}
+            >
+              Blog Yaz
+            </button>
+
             {/* Admin Giriş button */}
             <button
               onClick={() => navigate('/admin/panel')}

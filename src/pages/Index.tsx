@@ -14,7 +14,10 @@ import {
   Building2,
   MoreHorizontal,
 } from "lucide-react";
-import { searchCompaniesByName } from "@/services/companyService";
+import {
+  searchCompaniesByName,
+  getCompanySuggestions,
+} from "@/services/companyService";
 import { Company as CompanyType } from "@/types";
 
 // Category data with icons
@@ -62,7 +65,7 @@ const Index = () => {
   // Debounced search effect
   useEffect(() => {
     const searchCompanies = async () => {
-      if (searchQuery.trim().length < 2) {
+      if (searchQuery.trim().length < 3) {
         setSearchResults([]);
         setShowDropdown(false);
         return;
@@ -70,18 +73,38 @@ const Index = () => {
 
       setIsSearching(true);
       try {
-        const results = await searchCompaniesByName(searchQuery);
-        setSearchResults(results.slice(0, 5)); // Limit to 5 results
-        setShowDropdown(true);
+        // Use suggest endpoint for autocomplete
+        const suggestions = await getCompanySuggestions(searchQuery);
+
+        // Convert suggestions to Company format
+        const results: CompanyType[] = suggestions.map(
+          (s) =>
+            ({
+              id: s.id,
+              name: s.name,
+              description: "",
+              rating: s.rating,
+              commentCount: 0,
+              imageUrl: undefined,
+              phone: "",
+              sectors: [],
+              status: "active",
+              slug: s.slug, // Keep slug for navigation
+            }) as any,
+        );
+
+        setSearchResults(results);
+        setShowDropdown(results.length > 0 || searchQuery.length >= 3);
       } catch (error) {
         console.error("Search error:", error);
         setSearchResults([]);
+        setShowDropdown(true); // Show "no results" message
       } finally {
         setIsSearching(false);
       }
     };
 
-    const debounceTimer = setTimeout(searchCompanies, 300);
+    const debounceTimer = setTimeout(searchCompanies, 200);
     return () => clearTimeout(debounceTimer);
   }, [searchQuery]);
 
@@ -93,7 +116,7 @@ const Index = () => {
         setDropdownPos({
           top: rect.bottom + window.scrollY,
           left: rect.left + window.scrollX,
-          width: rect.width
+          width: rect.width,
         });
       }
     };
@@ -143,7 +166,9 @@ const Index = () => {
   const handleSelectCompany = (company: CompanyType) => {
     setShowDropdown(false);
     setSearchQuery(company.name);
-    navigate(`/company/${company.id}`);
+    // Use slug if available (from suggestions), otherwise use id
+    const identifier = (company as any).slug || company.id;
+    navigate(`/company/${identifier}`);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -154,13 +179,13 @@ const Index = () => {
 
   // Search Dropdown Content
   const DropdownContent = (
-    <div 
+    <div
       id="search-dropdown-portal"
       className="absolute bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[9999]"
       style={{
         top: `${dropdownPos.top + 8}px`,
         left: `${dropdownPos.left}px`,
-        width: `${Math.min(dropdownPos.width * 0.75, dropdownPos.width - 60)}px` // Approximate width matching design
+        width: `${Math.min(dropdownPos.width * 0.75, dropdownPos.width - 60)}px`, // Approximate width matching design
       }}
     >
       {isSearching ? (
@@ -197,7 +222,7 @@ const Index = () => {
             </button>
           ))}
         </div>
-      ) : searchQuery.length >= 2 ? (
+      ) : searchQuery.length >= 3 ? (
         <div className="p-4 text-center text-gray-500">
           "{searchQuery}" için sonuç bulunamadı
         </div>
@@ -259,7 +284,7 @@ const Index = () => {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyPress={handleKeyPress}
                     onFocus={() =>
-                      searchQuery.length >= 2 && setShowDropdown(true)
+                      searchQuery.length >= 3 && setShowDropdown(true)
                     }
                     placeholder="Arçelik Güvenilir Mi?"
                     className="w-full h-11 pl-12 pr-4 rounded-xl bg-white text-gray-800 placeholder-gray-400 text-base focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-lg"

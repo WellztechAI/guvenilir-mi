@@ -7,6 +7,8 @@ import { AuthProvider } from "@/providers/AuthProvider";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import CompanySignup from "./pages/CompanySignup";
+import CompanyLogin from "./pages/CompanyLogin";
+import CompanyPanel from "./pages/CompanyPanel";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import CompanyDetail from "./pages/CompanyDetail";
@@ -17,6 +19,7 @@ import SSS from "./pages/SSS";
 import CommentPolicy from "./pages/CommentPolicy";
 import CommunityRules from "./pages/CommunityRules";
 import BrandArea from "./pages/BrandArea";
+import BlogEditor from "./pages/BlogEditor";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
 
@@ -33,6 +36,8 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/company-signup" element={<CompanySignup />} />
+            <Route path="/company-login" element={<CompanyLogin />} />
+            <Route path="/company-panel" element={<CompanyPanel />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/panel" element={<AdminPanel />} />
             <Route path="/company/:id" element={<CompanyDetail />} />
@@ -43,6 +48,7 @@ const App = () => (
             <Route path="/yorum-politikasi" element={<CommentPolicy />} />
             <Route path="/topluluk-kurallari" element={<CommunityRules />} />
             <Route path="/marka-alani" element={<BrandArea />} />
+            <Route path="/blog-editor" element={<BlogEditor />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

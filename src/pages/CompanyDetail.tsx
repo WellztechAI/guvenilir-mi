@@ -8,13 +8,20 @@ import { ReviewItem } from "@/components/ReviewItem";
 import { Pagination } from "@/components/Pagination";
 import { Footer } from "@/components/Footer";
 import { fetchCompany, fetchCompanyBySlug } from "@/services/companyService";
-import { fetchCommentsByCompanyIdPaginated, createComment, likeComment, PaginationInfo } from "@/services/commentService";
+import {
+  fetchCommentsByCompanyIdPaginated,
+  fetchCommentsByCompanyId,
+  createComment,
+  likeComment,
+  PaginationInfo,
+} from "@/services/commentService";
 import { useAuthStore } from "@/store/authStore";
 import { Company, Comment } from "@/types";
 
 // Helper to check if a string is a UUID
 const isUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 };
 
@@ -27,14 +34,13 @@ const CONTACT_METHODS = [
   { value: "social_media", label: "Sosyal Medya" },
 ];
 
-
-
 const CompanyDetail = () => {
   const { id: companyIdentifier } = useParams<{ id: string }>();
   const { user } = useAuthStore();
   const [company, setCompany] = useState<Company | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [myComment, setMyComment] = useState<Comment | undefined>(undefined);
+  const [featuredComments, setFeaturedComments] = useState<Comment[]>([]);
   const [otherComments, setOtherComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +67,8 @@ const CompanyDetail = () => {
   const [newCommentRating, setNewCommentRating] = useState(5);
   const [newCommentMessage, setNewCommentMessage] = useState("");
   const [newCommentProductName, setNewCommentProductName] = useState("");
-  const [newCommentContactMethod, setNewCommentContactMethod] = useState("website");
+  const [newCommentContactMethod, setNewCommentContactMethod] =
+    useState("website");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -99,38 +106,65 @@ const CompanyDetail = () => {
   }, [loadCompany]);
 
   // Fetch comments with filters and pagination
-  const fetchComments = useCallback(async (page: number = currentPage) => {
-    if (!company?.id) return;
+  const fetchComments = useCallback(
+    async (page: number = currentPage) => {
+      if (!company?.id) return;
 
-    try {
-      setIsFiltering(true);
-      const result = await fetchCommentsByCompanyIdPaginated(company.id, {
-        status: "approved",
-        rating: selectedRating ? parseInt(selectedRating) : undefined,
-        search: searchTerm || undefined,
-        sortBy: "created_at",
-        sortOrder: sortOrder,
-        limit: ITEMS_PER_PAGE,
-        page: page,
-      });
+      try {
+        setIsFiltering(true);
+        const result = await fetchCommentsByCompanyIdPaginated(company.id, {
+          status: "approved",
+          rating: selectedRating ? parseInt(selectedRating) : undefined,
+          search: searchTerm || undefined,
+          sortBy: "created_at",
+          sortOrder: sortOrder,
+          limit: ITEMS_PER_PAGE,
+          page: page,
+        });
 
-      setComments(result.comments);
-      setPaginationInfo(result.pagination);
+        setComments(result.comments);
+        setPaginationInfo(result.pagination);
 
-      if (user) {
-        const myReview = result.comments.find((c: Comment) => c.authorId === user.id);
-        setMyComment(myReview);
-        setOtherComments(result.comments.filter((c: Comment) => c.id !== myReview?.id));
-      } else {
-        setMyComment(undefined);
-        setOtherComments(result.comments);
+        // Separate user's comment - check both approved comments and fetch user's own comment separately
+        let myReview: Comment | undefined;
+        let remainingComments = result.comments;
+        
+        if (user) {
+          // First check if user's comment is in the approved list
+          myReview = result.comments.find(
+            (c: Comment) => c.authorId === user.id,
+          );
+          
+          // If not found in approved, fetch all user's comments for this company (including pending)
+          if (!myReview) {
+            try {
+              const allUserComments = await fetchCommentsByCompanyId(company.id, {
+                status: undefined, // Don't filter by status to get pending comments too
+              });
+              myReview = allUserComments.find((c: Comment) => c.authorId === user.id);
+            } catch (error) {
+              console.error('Error fetching user comments:', error);
+            }
+          }
+          
+          setMyComment(myReview);
+          remainingComments = result.comments.filter((c: Comment) => c.id !== myReview?.id);
+        } else {
+          setMyComment(undefined);
+        }
+
+        // Get top 2 comments by likes for featured section
+        const sortedByLikes = [...remainingComments].sort((a, b) => b.likesCount - a.likesCount);
+        setFeaturedComments(sortedByLikes.slice(0, 2));
+        setOtherComments(remainingComments);
+      } catch (err) {
+        console.error("Error fetching comments:", err);
+      } finally {
+        setIsFiltering(false);
       }
-    } catch (err) {
-      console.error("Error fetching comments:", err);
-    } finally {
-      setIsFiltering(false);
-    }
-  }, [company?.id, selectedRating, searchTerm, sortOrder, user, currentPage]);
+    },
+    [company?.id, selectedRating, searchTerm, sortOrder, user, currentPage],
+  );
 
   // Fetch comments when company or filters change
   useEffect(() => {
@@ -142,7 +176,7 @@ const CompanyDetail = () => {
     setCurrentPage(page);
     fetchComments(page);
     // Scroll to top of reviews section
-    window.scrollTo({ top: 400, behavior: 'smooth' });
+    window.scrollTo({ top: 400, behavior: "smooth" });
   };
 
   // Handle search submit
@@ -215,7 +249,7 @@ const CompanyDetail = () => {
         newCommentRating,
         newCommentMessage,
         newCommentProductName || undefined,
-        newCommentContactMethod
+        newCommentContactMethod,
       );
 
       // Reset form
@@ -229,7 +263,9 @@ const CompanyDetail = () => {
       fetchComments();
       loadCompany(false);
 
-      alert("Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.");
+      alert(
+        "Yorumunuz başarıyla gönderildi. Onaylandıktan sonra yayınlanacaktır.",
+      );
     } catch (err) {
       console.error("Error submitting comment:", err);
       setSubmitError("Yorum gönderilirken bir hata oluştu.");
@@ -288,8 +324,18 @@ const CompanyDetail = () => {
                     onClick={() => setShowCommentForm(false)}
                     className="text-gray-500 hover:text-gray-700"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -310,7 +356,9 @@ const CompanyDetail = () => {
                         >
                           <svg
                             className="w-8 h-8"
-                            fill={star <= newCommentRating ? "#FFD700" : "#E5E7EB"}
+                            fill={
+                              star <= newCommentRating ? "#FFD700" : "#E5E7EB"
+                            }
                             viewBox="0 0 24 24"
                           >
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
@@ -341,7 +389,9 @@ const CompanyDetail = () => {
                     </label>
                     <select
                       value={newCommentContactMethod}
-                      onChange={(e) => setNewCommentContactMethod(e.target.value)}
+                      onChange={(e) =>
+                        setNewCommentContactMethod(e.target.value)
+                      }
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       {CONTACT_METHODS.map((method) => (
@@ -395,7 +445,7 @@ const CompanyDetail = () => {
           {/* User Review Section */}
           {myComment && (
             <section className="mt-9">
-              <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-none tracking-[-0.56px] text-center max-md:max-w-full">
+              <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-[40px] tracking-[-0.02em] text-left max-md:max-w-full" style={{ fontFamily: 'Manrope' }}>
                 Marka Hakkında Yazdığınız Yorum
               </h2>
               <div className="bg-[rgba(253,253,253,1)] shadow-[0px_6px_10px_rgba(177,177,177,0.08)] border border flex flex-col items-stretch text-xs font-medium mr-[43px] mt-[5px] py-[23px] rounded-[26px] border-solid max-md:max-w-full max-md:mr-2.5">
@@ -451,12 +501,12 @@ const CompanyDetail = () => {
 
           {/* Featured Reviews Section */}
           <section className="mt-[30px]">
-            <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-none tracking-[-0.56px] text-center ml-[15px] max-md:ml-2.5">
+            <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-[40px] tracking-[-0.02em] text-left ml-0 max-md:ml-0" style={{ fontFamily: 'Manrope' }}>
               Öne Çıkan Yorumlar
             </h2>
             <div className="mr-[43px] mt-[30px] max-md:max-w-full max-md:mr-2.5">
               <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-                {otherComments.slice(0, 2).map((comment) => (
+                {featuredComments.map((comment) => (
                   <div
                     key={comment.id}
                     className="w-6/12 max-md:w-full max-md:ml-0"
@@ -464,16 +514,18 @@ const CompanyDetail = () => {
                     <ReviewCard
                       author={comment.authorName}
                       date={formatDate(comment.date)}
+                      rating={comment.rating}
                       content={comment.message}
                       helpful={comment.likesCount}
                       avatar={
                         comment.authorAvatar ||
                         "https://api.builder.io/api/v1/image/assets/TEMP/ed4d506d869550e63301cda115d2a37f3f3d8102?placeholderIfAbsent=true"
                       }
+                      onLike={() => handleLikeComment(comment.id)}
                     />
                   </div>
                 ))}
-                {otherComments.length === 0 && !isFiltering && (
+                {featuredComments.length === 0 && !isFiltering && (
                   <div className="w-full text-center text-gray-500 py-10">
                     Henüz yorum yapılmamış. İlk yorumu sen yap!
                   </div>
@@ -488,149 +540,129 @@ const CompanyDetail = () => {
           </section>
 
           {/* All Reviews Section */}
-          <section className="mr-[43px] mt-[30px] max-md:max-w-full max-md:mr-2.5">
-            <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-              <div className="w-[71%] max-md:w-full max-md:ml-0">
-                <div className="w-full max-md:max-w-full max-md:mt-8">
-                  <div className="max-md:max-w-full max-md:mr-2.5">
-                    <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-                      <div className="w-6/12 max-md:w-full max-md:ml-0">
-                        <ReviewFilters
-                          searchTerm={searchTerm}
-                          selectedRating={selectedRating}
-                          onSearchChange={setSearchTerm}
-                          onRatingChange={handleRatingChange}
-                          onSearchSubmit={handleSearchSubmit}
-                        />
-                      </div>
-                      <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
-                        <div className="w-full mt-[38px] max-md:max-w-full max-md:mt-10">
-                          <div className="flex w-full flex-col items-stretch text-xs text-black font-medium text-left tracking-[-0.48px] leading-loose max-md:max-w-full max-md:pl-5">
-                            <div>Öne Çıkan Konular</div>
-                            <div className="flex w-full items-stretch gap-0.5 mt-[7px] flex-wrap">
-                              {[
-                                "hizmet",
-                                "kredi kartı",
-                                "dolandırıcılık",
-                                "öneri",
-                                "teşekkür",
-                                "şikayet",
-                              ].map((topic) => (
-                                <button
-                                  key={topic}
-                                  onClick={() => handleTopicClick(topic)}
-                                  className={`flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md transition-colors ${searchTerm === topic
-                                    ? "bg-purple-100 text-purple-700"
-                                    : "bg-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.08)]"
-                                    }`}
-                                >
-                                  <span className="self-stretch my-auto">
-                                    {topic}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Sort Buttons - Aligned Right */}
-                          <div className="w-full flex justify-end mt-[74px]">
-                            <div className="flex gap-[-1px] rounded-lg whitespace-nowrap text-sm font-normal leading-none">
-                              <button
-                                onClick={() => handleSortChange("ASC")}
-                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] transition-colors ${sortOrder === "ASC"
-                                  ? "text-[#17181A] bg-white"
-                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
-                                  }`}
-                              >
-                                <span className="self-stretch my-auto">
-                                  En Eski
-                                </span>
-                              </button>
-                              <button
-                                onClick={() => handleSortChange("DESC")}
-                                className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] transition-colors ${sortOrder === "DESC"
-                                  ? "text-[#17181A] bg-white"
-                                  : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
-                                  }`}
-                              >
-                                <span className="self-stretch my-auto">
-                                  En Yeni
-                                </span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reviews List */}
-                  {isFiltering ? (
-                    <div className="mt-[58px] flex justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                    </div>
-                  ) : otherComments.length > 0 ? (
-                    <div className="mt-[58px] max-md:max-w-full max-md:mt-10">
-                      <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
-                        <div className="w-6/12 max-md:w-full max-md:ml-0">
-                          <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
-                            {leftColumnComments.map((review) => (
-                              <ReviewItem
-                                key={review.id}
-                                review={review}
-                                onLike={handleLikeComment}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                        <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
-                          <div className="w-full">
-                            <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
-                              {rightColumnComments.map((review) => (
-                                <ReviewItem
-                                  key={review.id}
-                                  review={review}
-                                  onLike={handleLikeComment}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-[58px] text-center text-gray-500">
-                      {searchTerm || selectedRating
-                        ? "Filtrelere uygun yorum bulunamadı."
-                        : "Henüz yorum yapılmamış."}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="w-[29%] ml-5 max-md:w-full max-md:ml-0">
-                <aside className="flex w-full flex-col items-stretch text-xs text-[rgba(36,36,36,1)] font-normal text-center tracking-[-0.48px] leading-loose mt-7 max-md:mt-10">
-                  <img
-                    src="https://api.builder.io/api/v1/image/assets/TEMP/4345cc82038152849a7492f7db5b151115b3552e?placeholderIfAbsent=true"
-                    alt="Advertisement"
-                    className="aspect-[1.57] object-contain w-full max-md:mr-[5px]"
-                  />
-                  <img
-                    src="https://api.builder.io/api/v1/image/assets/TEMP/ba5d1392e0927b72ae819d9309cbb985f62268d2?placeholderIfAbsent=true"
-                    alt="Advertisement"
-                    className="aspect-[2.49] object-contain w-full mt-[18px] max-md:ml-[3px]"
-                  />
-                  <div className="flex items-stretch gap-1 mt-[9px] max-md:mr-[5px]">
-                    <div className="grow">
-                      Güvenilirmi.com yorumları nasıl yayınlar?
-                    </div>
-                    <img
-                      src="https://api.builder.io/api/v1/image/assets/TEMP/6bf5ccc4678e8e6600a938500d53c01b56ba819e?placeholderIfAbsent=true"
-                      alt="External link"
-                      className="aspect-[1] object-contain w-2 shrink-0 my-auto"
+          <section className="mt-[30px] max-md:max-w-full">
+            <h2 className="text-[rgba(55,55,55,1)] text-[28px] font-semibold leading-[40px] tracking-[-0.02em] text-left max-md:max-w-full mb-[30px]" style={{ fontFamily: 'Manrope' }}>
+              Tüm Yorumlar
+            </h2>
+            <div className="w-full max-md:max-w-full">
+              <div className="max-md:max-w-full max-md:mr-2.5">
+                <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
+                  <div className="w-6/12 max-md:w-full max-md:ml-0">
+                    <ReviewFilters
+                      searchTerm={searchTerm}
+                      selectedRating={selectedRating}
+                      onSearchChange={setSearchTerm}
+                      onRatingChange={handleRatingChange}
+                      onSearchSubmit={handleSearchSubmit}
                     />
                   </div>
-                </aside>
+                  <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
+                    <div className="w-full mt-[38px] max-md:max-w-full max-md:mt-10">
+                      <div className="flex w-full flex-col items-stretch text-xs text-black font-medium text-left tracking-[-0.48px] leading-loose max-md:max-w-full max-md:pl-5">
+                        <div>Öne Çıkan Konular</div>
+                        <div className="flex w-full items-stretch gap-0.5 mt-[7px] flex-wrap">
+                          {[
+                            "hizmet",
+                            "kredi kartı",
+                            "dolandırıcılık",
+                            "öneri",
+                            "teşekkür",
+                            "şikayet",
+                          ].map((topic) => (
+                            <button
+                              key={topic}
+                              onClick={() => handleTopicClick(topic)}
+                              className={`flex items-center gap-1.5 justify-center px-2.5 py-1 rounded-md transition-colors ${
+                                searchTerm === topic
+                                  ? "bg-purple-100 text-purple-700"
+                                  : "bg-[rgba(0,0,0,0.04)] hover:bg-[rgba(0,0,0,0.08)]"
+                              }`}
+                            >
+                              <span className="self-stretch my-auto">
+                                {topic}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Sort Buttons - Aligned Right */}
+                      <div className="w-full flex justify-end mt-[74px]">
+                        <div className="flex gap-[-1px] rounded-lg whitespace-nowrap text-sm font-normal leading-none">
+                          <button
+                            onClick={() => handleSortChange("ASC")}
+                            className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 rounded-[8px_0_0_8px] border-solid border-[#D9E1E7] transition-colors ${
+                              sortOrder === "ASC"
+                                ? "text-[#17181A] bg-white"
+                                : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                            }`}
+                          >
+                            <span className="self-stretch my-auto">
+                              En Eski
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => handleSortChange("DESC")}
+                            className={`justify-center items-center border flex gap-1.5 overflow-hidden px-3 py-2.5 border-solid border-[#D9E1E7] border-l-0 rounded-[0_8px_8px_0] transition-colors ${
+                              sortOrder === "DESC"
+                                ? "text-[#17181A] bg-white"
+                                : "text-[#99B2C6] bg-[#F1F5F7] hover:bg-white hover:text-[#17181A]"
+                            }`}
+                          >
+                            <span className="self-stretch my-auto">
+                              En Yeni
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Reviews List */}
+              {isFiltering ? (
+                <div className="mt-[58px] flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                </div>
+              ) : otherComments.length > 0 ? (
+                <div className="mt-[58px] max-md:max-w-full max-md:mt-10">
+                  <div className="gap-5 flex max-md:flex-col max-md:items-stretch">
+                    <div className="w-6/12 max-md:w-full max-md:ml-0">
+                      <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
+                        {leftColumnComments.map((review) => (
+                          <ReviewItem
+                            key={review.id}
+                            review={review}
+                            onLike={handleLikeComment}
+                            companyName={company?.name}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-6/12 ml-5 max-md:w-full max-md:ml-0">
+                      <div className="w-full">
+                        <div className="flex w-full flex-col items-stretch mt-1.5 max-md:max-w-full space-y-8">
+                          {rightColumnComments.map((review) => (
+                            <ReviewItem
+                              key={review.id}
+                              review={review}
+                              onLike={handleLikeComment}
+                              companyName={company?.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-[58px] text-center text-gray-500">
+                  {searchTerm || selectedRating
+                    ? "Filtrelere uygun yorum bulunamadı."
+                    : "Henüz yorum yapılmamış."}
+                </div>
+              )}
             </div>
           </section>
 
