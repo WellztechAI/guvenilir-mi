@@ -11,6 +11,7 @@ const CompanyLogin = () => {
     useCompanyAuth();
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -24,7 +25,7 @@ const CompanyLogin = () => {
     clearError();
 
     try {
-      await login({ emailOrUsername });
+      await login({ emailOrUsername, password });
       navigate("/company-panel");
     } catch (err) {
       // Error is handled by useCompanyAuth
@@ -96,6 +97,25 @@ const CompanyLogin = () => {
                       value={emailOrUsername}
                       onChange={(e) => setEmailOrUsername(e.target.value)}
                       placeholder="ornek@sirket.com veya kullaniciadi"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:outline-none focus:border-[#2d1b69] transition-colors"
+                      style={{ fontFamily: "Manrope, sans-serif" }}
+                      required
+                    />
+                  </div>
+
+                  {/* Password field */}
+                  <div className="mb-6">
+                    <label
+                      className="block text-sm text-white/80 mb-2"
+                      style={{ fontFamily: "Manrope, sans-serif" }}
+                    >
+                      Şifre
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Panel şifreniz"
                       className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white focus:outline-none focus:border-[#2d1b69] transition-colors"
                       style={{ fontFamily: "Manrope, sans-serif" }}
                       required

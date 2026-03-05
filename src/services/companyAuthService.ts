@@ -21,6 +21,7 @@ export interface CompanyAuthResponse {
 
 export interface CompanyLoginCredentials {
   emailOrUsername: string; // Can be requester_company_email or panel_user_name
+  password: string;
 }
 
 // ============================================
