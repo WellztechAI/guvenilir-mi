@@ -18,6 +18,7 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [coverError, setCoverError] = useState(false);
 
   useEffect(() => {
     // Check if company is in favourites (can be either objects with id or plain strings for backward compatibility)
@@ -176,11 +177,12 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
       <section className="w-full -mt-3">
         {/* Full-width hero image */}
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-          {company.imageUrl ? (
+          {company.imageUrl && !coverError ? (
             <img
               src={company.imageUrl}
-              alt="Brand cover"
+              alt=""
               className="w-full h-[300px] object-cover"
+              onError={() => setCoverError(true)}
             />
           ) : (
             <div
