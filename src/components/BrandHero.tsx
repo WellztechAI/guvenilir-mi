@@ -176,14 +176,21 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
       <section className="w-full -mt-3">
         {/* Full-width hero image */}
         <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-          <img
-            src={
-              company.imageUrl ||
-              "https://api.builder.io/api/v1/image/assets/TEMP/8f3e6326e92d8c9980fa21aeab55702ce9a4b8ae?placeholderIfAbsent=true"
-            }
-            alt="Brand cover"
-            className="w-full h-[300px] object-cover"
-          />
+          {company.imageUrl ? (
+            <img
+              src={company.imageUrl}
+              alt="Brand cover"
+              className="w-full h-[300px] object-cover"
+            />
+          ) : (
+            <div
+              className="w-full h-[300px]"
+              style={{
+                background:
+                  "linear-gradient(135deg, #1a0533 0%, #2D1B69 30%, #4C38A5 60%, #7B5EA7 100%)",
+              }}
+            />
+          )}
         </div>
 
         {/* Purple to white gradient */}

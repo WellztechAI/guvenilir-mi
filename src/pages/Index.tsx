@@ -14,11 +14,10 @@ import {
   Building2,
   MoreHorizontal,
 } from "lucide-react";
-import {
-  searchCompaniesByName,
-  getCompanySuggestions,
-} from "@/services/companyService";
+import { getCompanySuggestions } from "@/services/companyService";
 import { Company as CompanyType } from "@/types";
+import { createCompany } from "@/services/authApiService";
+import { Plus, X } from "lucide-react";
 
 // Category data with icons
 const categories = [
@@ -61,6 +60,17 @@ const Index = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+
+  // Company creation modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    description: "",
+    phone: "",
+    website: "",
+  });
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   // Debounced search effect
   useEffect(() => {
@@ -177,6 +187,47 @@ const Index = () => {
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setCreateForm({ name: searchQuery, description: "", phone: "", website: "" });
+    setCreateError("");
+    setShowDropdown(false);
+    setShowCreateModal(true);
+  };
+
+  const generateSlug = (name: string) =>
+    name
+      .toLowerCase()
+      .replace(/ğ/g, "g").replace(/ü/g, "u").replace(/ş/g, "s")
+      .replace(/ı/g, "i").replace(/ö/g, "o").replace(/ç/g, "c")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+  const handleCreateCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createForm.name.trim()) return;
+    setIsCreating(true);
+    setCreateError("");
+    try {
+      const slug = generateSlug(createForm.name);
+      await createCompany({
+        name: createForm.name.trim(),
+        slug,
+        description: createForm.description.trim() || undefined,
+        phone: createForm.phone.trim() || undefined,
+      });
+      setShowCreateModal(false);
+      navigate(`/company/${slug}`);
+    } catch (err: any) {
+      setCreateError(
+        err?.message?.includes("already exists")
+          ? "Bu isimde bir firma zaten mevcut."
+          : "Firma oluşturulurken bir hata oluştu. Lütfen tekrar deneyin."
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   // Search Dropdown Content
   const DropdownContent = (
     <div
@@ -223,8 +274,17 @@ const Index = () => {
           ))}
         </div>
       ) : searchQuery.length >= 3 ? (
-        <div className="p-4 text-center text-gray-500">
-          "{searchQuery}" için sonuç bulunamadı
+        <div className="p-4">
+          <p className="text-center text-gray-500 text-sm mb-3">
+            "{searchQuery}" için sonuç bulunamadı
+          </p>
+          <button
+            onClick={handleOpenCreateModal}
+            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors"
+          >
+            <Plus size={16} />
+            "{searchQuery}" firmasını oluştur
+          </button>
         </div>
       ) : null}
     </div>
@@ -233,6 +293,89 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header />
+
+      {/* Create Company Modal */}
+      {showCreateModal && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={(e) => e.target === e.currentTarget && setShowCreateModal(false)}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">Firma Oluştur</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              Firma hemen oluşturulur ve yorum yapılabilir hale gelir.
+            </p>
+
+            <form onSubmit={handleCreateCompany} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Firma Adı <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="örn. Trendyol"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Açıklama
+                </label>
+                <textarea
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Firma hakkında kısa bir açıklama..."
+                  rows={3}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Telefon
+                </label>
+                <input
+                  type="tel"
+                  value={createForm.phone}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+                  placeholder="+90 5xx xxx xx xx"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+
+              {createError && (
+                <p className="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2">
+                  {createError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isCreating || !createForm.name.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                {isCreating ? (
+                  <span className="animate-pulse">Oluşturuluyor...</span>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    Firmayı Oluştur
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section using PageHero */}
       <section className="relative w-full pb-20">
