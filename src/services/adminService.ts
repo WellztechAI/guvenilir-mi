@@ -221,13 +221,21 @@ export const updateCommentStatus = async (
     commentId: string,
     status: 'pending' | 'approved' | 'rejected' | 'deleted'
 ): Promise<void> => {
-    try {
-        await api.patch(`/api/comments/${commentId}/status`, { status });
-        console.log('✅ Comment status updated:', commentId, status);
-    } catch (error) {
-        console.error('Error updating comment status:', error);
-        throw error;
+    const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/comments/${commentId}/status`,
+        {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status }),
+        }
+    );
+    if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || `HTTP ${response.status}`);
     }
+    // Response consumed but not needed
+    await response.json();
+    console.log('✅ Comment status updated:', commentId, status);
 };
 
 /**

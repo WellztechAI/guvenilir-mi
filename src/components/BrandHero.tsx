@@ -249,13 +249,8 @@ export const BrandHero: React.FC<BrandHeroProps> = ({ company }) => {
                             className="aspect-[0.87] object-contain w-3.5 self-stretch shrink-0 my-auto"
                           />
                         </div>
-                        {/* Rating with Vector.svg - Left side - Only boxes */}
-                        <div className="mt-3">
-                          <RatingDisplayLeft rating={rating} />
-                        </div>
-                        <div className="text-xs leading-[1.4] mt-2 whitespace-nowrap">
-                          Toplam {commentCount} yorum üzerinden{" "}
-                          {rating.toFixed(1)} / 5 değerlendirme
+                        <div className="text-xs leading-[1.4] self-center">
+                          {company.rating != null ? company.rating.toFixed(1) : '-'} ({company.commentCount} Yorum)
                         </div>
                       </div>
                       <div className="flex items-stretch gap-[5px] text-xs font-normal text-center tracking-[-0.48px] leading-loose mt-3">

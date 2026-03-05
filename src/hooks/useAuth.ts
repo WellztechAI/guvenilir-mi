@@ -8,6 +8,7 @@ import {
 } from '@/services/authApiService';
 import { useAuthStore, useUser, useIsAuthenticated, useIsAuthLoading } from '@/store/authStore';
 import { User } from '@/types';
+import { loginWithCognito, logoutFromCognito, clearCognitoTokens } from '@/lib/cognito';
 
 /**
  * Custom hook for authentication operations
@@ -97,31 +98,40 @@ export const useAuth = () => {
     };
 
     /**
-     * Sign in with Google (placeholder - to be implemented with OAuth)
+     * Cognito Hosted UI üzerinden giriş yap (Google ve diğer sosyal sağlayıcılar dahil)
+     * Kullanıcıyı Cognito Hosted UI'a yönlendirir.
+     * Giriş tamamlanınca /auth/callback sayfasına dönülür.
+     *
+     * @param identityProvider - Opsiyonel: 'Google', 'Facebook' vb. Belirtilmezse Hosted UI açılır.
      */
-    const loginWithGoogle = async () => {
+    const loginWithCognitoHostedUI = async (identityProvider?: string) => {
         setIsLoading(true);
         setError(null);
         try {
-            // TODO: Implement Google OAuth with backend
-            throw new Error('Google login is not yet implemented');
+            // Bu fonksiyon window.location.href yaptığı için await gerekmez,
+            // sayfa redirect edilir ve hook unmount olur.
+            await loginWithCognito(identityProvider);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Google login failed';
+            const errorMessage = err instanceof Error ? err.message : 'Cognito giriş başlatılamadı';
             setError(errorMessage);
-            throw err;
-        } finally {
             setIsLoading(false);
+            throw err;
         }
+        // isLoading burada reset edilmez — sayfa zaten redirect olacak
     };
 
+    // Geriye dönük uyumluluk için loginWithGoogle → Cognito Google IdP
+    const loginWithGoogle = async () => loginWithCognitoHostedUI('Google');
+
     /**
-     * Sign out
+     * Sign out — hem email hem de Cognito oturumunu temizler
      */
     const logout = async () => {
         setIsLoading(true);
         setError(null);
         try {
             apiLogout();
+            clearCognitoTokens();
             clearAuth();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Logout failed';

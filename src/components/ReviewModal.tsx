@@ -190,32 +190,24 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
                   <Check size={20} className="text-[#84CC16] fill-[#84CC16]" />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Yellow checks for stars */}
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="w-5 h-5 bg-[#FFC107] rounded flex items-center justify-center"
-                      >
-                        <Check
-                          size={12}
-                          className="text-white"
-                          strokeWidth={4}
-                        />
-                      </div>
-                    ))}
-                    <div className="w-5 h-5 bg-gray-200 rounded flex items-center justify-center">
-                      <Check size={12} className="text-white" strokeWidth={4} />
-                    </div>
-                  </div>
-                  <span className="text-xs font-medium text-gray-600">
-                    {company.rating ? company.rating.toFixed(1) : "0.0"} (
-                    {company.commentCount} Yorum)
-                  </span>
-                </div>
-              </div>
-            </div>
+                                <div className="flex items-center gap-2">
+                                    {/* Yellow checks for stars */}
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className="w-5 h-5 bg-[#FFC107] rounded flex items-center justify-center">
+                                                <Check size={12} className="text-white" strokeWidth={4} />
+                                            </div>
+                                        ))}
+                                        <div className="w-5 h-5 bg-gray-200 rounded flex items-center justify-center">
+                                            <Check size={12} className="text-white" strokeWidth={4} />
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-600">
+                                        {company.rating != null ? company.rating.toFixed(1) : '-'} ({company.commentCount} Yorum)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
             {/* Right: Guarantee Card */}
             <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center gap-3">
