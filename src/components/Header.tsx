@@ -46,19 +46,11 @@ export const Header: React.FC = () => {
     >
       {/* Left: Logo and Title - Links to Home */}
       <Link to="/" className="flex items-center gap-3">
-        <div className="relative flex items-center justify-center" style={{ width: 32, height: 32 }}>
-          {/* Background square */}
+        <div className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
           <img
-            src="/Vector (1).png"
-            alt=""
-            className="absolute inset-0 w-full h-full"
-          />
-          {/* Checkmark on top - smaller and centered */}
-          <img
-            src="/Vector.png"
-            alt="Logo"
-            className="relative"
-            style={{ width: '60%', height: '60%' }}
+            src="/Vector-2.svg"
+            alt="güvenilir mi"
+            className="w-8 h-8"
           />
         </div>
         <span
@@ -70,7 +62,7 @@ export const Header: React.FC = () => {
             color: isCompanyUser ? '#FFFFFF' : '#202023',
           }}
         >
-          güvenilir mi?
+          güvenilir mi
         </span>
       </Link>
 
