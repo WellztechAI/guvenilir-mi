@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { createCompany, createCompanyVerification } from '@/services/authApiService';
+import { createCompany, createCompanyVerification, uploadFile } from '@/services/authApiService';
 import citiesData from '@/constants/cities.json';
 
 type Step = 1 | 2 | 3 | 4;
@@ -15,7 +15,7 @@ interface CompanyFormData {
     requesterName: string;
     requesterTitle: string;
     requesterCompanyEmail: string;
-    requesterPhoneNumber: string;
+    website: string;
     panelUserName: string;
     mernisNo: string;
     signatureUrls: string;
@@ -34,6 +34,12 @@ const CompanySignup = () => {
     const [error, setError] = useState<string | null>(null);
     const [verificationId, setVerificationId] = useState<string | null>(null);
 
+    // File upload states for signature circular
+    const [signatureFile, setSignatureFile] = useState<File | null>(null);
+    const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+    const [signatureUploadError, setSignatureUploadError] = useState<string | null>(null);
+    const signatureInputRef = useRef<HTMLInputElement>(null);
+
     // Form data for company verification
     const [formData, setFormData] = useState<CompanyFormData>({
         companyName: '',
@@ -41,7 +47,7 @@ const CompanySignup = () => {
         requesterName: '',
         requesterTitle: '',
         requesterCompanyEmail: '',
-        requesterPhoneNumber: '',
+        website: '',
         panelUserName: '',
         mernisNo: '',
         signatureUrls: '',
@@ -115,31 +121,42 @@ const CompanySignup = () => {
         }
     };
 
+    const handleSignatureFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSignatureFile(file);
+        setSignatureUploadError(null);
+        setIsUploadingSignature(true);
+
+        try {
+            const uploadResponse = await uploadFile(file, 'signatures');
+            updateFormData('signatureUrls', uploadResponse.url);
+        } catch (err) {
+            console.error('Signature upload error:', err);
+            setSignatureUploadError('Dosya yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+            setSignatureFile(null);
+        } finally {
+            setIsUploadingSignature(false);
+        }
+    };
+
     const handleSubmit = async () => {
         setIsLoading(true);
         setError(null);
 
         try {
             // Step 1: Create the company via API
-            console.log('Creating company via API with data:', {
-                name: formData.companyName,
-                slug: formData.companySlug,
-                description: `${formData.companyName} şirketi`,
-                phone: formData.requesterPhoneNumber,
-            });
-            
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const companyResponse: any = await createCompany({
                 name: formData.companyName,
                 slug: formData.companySlug,
                 description: `${formData.companyName} şirketi`,
-                phone: formData.requesterPhoneNumber,
+                website: formData.website,
             });
-            console.log('FULL Company Response:', JSON.stringify(companyResponse, null, 2));
-            
+
             // Handle potential response wrapping (e.g. { data: { id: ... } } vs { id: ... })
             const companyId = companyResponse.id || (companyResponse.data && companyResponse.data.id);
-            console.log('Extracted Company ID:', companyId);
 
             if (!companyId) {
                 console.error('Failed to get company ID from response:', companyResponse);
@@ -153,7 +170,6 @@ const CompanySignup = () => {
                 requesterName: formData.requesterName,
                 requesterTitle: formData.requesterTitle || undefined,
                 requesterCompanyEmail: formData.requesterCompanyEmail,
-                requesterPhoneNumber: formData.requesterPhoneNumber || undefined,
                 panelUserName: formData.panelUserName,
                 panelPassword: panelPassword,
                 mernisNo: formData.mernisNo || undefined,
@@ -165,12 +181,6 @@ const CompanySignup = () => {
                 membership: formData.membership,
             };
 
-            console.log('Submitting company verification with payload:', JSON.stringify(verificationData, null, 2));
-            
-            // Check for missing required fields manually to debug "required" error
-            if (!verificationData.companyId) console.error('MISSING: companyId');
-            if (!verificationData.requesterName) console.error('MISSING: requesterName');
-            if (!verificationData.requesterCompanyEmail) console.error('MISSING: requesterCompanyEmail');
             const verificationResponse = await createCompanyVerification(verificationData);
             console.log('Company verification created with ID:', verificationResponse.id);
 
@@ -289,16 +299,13 @@ const CompanySignup = () => {
 
                             <div className="mb-4">
                                 <input
-                                    type="tel"
-                                    value={formData.requesterPhoneNumber}
-                                    onChange={(e) => {
-                                        // Only allow numbers, spaces, parentheses, hyphens, and plus sign
-                                        const value = e.target.value.replace(/[^\d\s\-\+\(\)]/g, '');
-                                        updateFormData('requesterPhoneNumber', value);
-                                    }}
-                                    placeholder="Başvuru Yapanın Telefon Numarası"
+                                    type="url"
+                                    value={formData.website}
+                                    onChange={(e) => updateFormData('website', e.target.value)}
+                                    placeholder="Web Sitesi (zorunlu, ör: https://markaadi.com)"
                                     className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
                                     style={{ fontFamily: 'Manrope, sans-serif' }}
+                                    required
                                 />
                             </div>
 
@@ -307,9 +314,10 @@ const CompanySignup = () => {
                                     type="email"
                                     value={formData.requesterCompanyEmail}
                                     onChange={(e) => updateFormData('requesterCompanyEmail', e.target.value)}
-                                    placeholder="Başvuru Yapan Kişinin Şirket Uzantılı E-posta Adresi"
+                                    placeholder="Başvuru Yapan Kişinin Şirket Uzantılı E-posta Adresi (zorunlu)"
                                     className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
                                     style={{ fontFamily: 'Manrope, sans-serif' }}
+                                    required
                                 />
                             </div>
 
@@ -329,7 +337,7 @@ const CompanySignup = () => {
                                 <div className="flex justify-end">
                                     <button
                                         onClick={handleNextStep}
-                                        disabled={!acceptedTerms || !formData.companyName || !formData.requesterName || !formData.requesterCompanyEmail}
+                                        disabled={!acceptedTerms || !formData.companyName || !formData.requesterName || !formData.requesterTitle || !formData.requesterCompanyEmail || !formData.website}
                                         className="px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                         style={{ fontFamily: 'Metropolis, sans-serif' }}
                                     >
@@ -455,15 +463,61 @@ const CompanySignup = () => {
                                         style={{ fontFamily: 'Manrope, sans-serif' }}
                                     />
 
-                                    <div className="relative">
+                                    {/* Signature Circular File Upload */}
+                                    <div>
                                         <input
-                                            type="text"
-                                            value={formData.signatureUrls}
-                                            onChange={(e) => updateFormData('signatureUrls', e.target.value)}
-                                            placeholder="İmza Sirküleri Yükleyiniz"
-                                            className="w-full px-4 py-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-[#2EC4B6] transition-colors"
-                                            style={{ fontFamily: 'Manrope, sans-serif' }}
+                                            ref={signatureInputRef}
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            onChange={handleSignatureFileChange}
+                                            className="hidden"
+                                            id="signature-upload"
                                         />
+                                        <div
+                                            onClick={() => signatureInputRef.current?.click()}
+                                            className={`w-full px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors flex items-center gap-3 ${
+                                                isUploadingSignature
+                                                    ? 'border-[#2EC4B6] bg-[#2EC4B6]/5'
+                                                    : formData.signatureUrls
+                                                    ? 'border-green-400 bg-green-50'
+                                                    : 'border-gray-300 bg-white hover:border-[#2EC4B6] hover:bg-[#2EC4B6]/5'
+                                            }`}
+                                            style={{ fontFamily: 'Manrope, sans-serif' }}
+                                        >
+                                            {isUploadingSignature ? (
+                                                <>
+                                                    <div className="w-5 h-5 border-2 border-[#2EC4B6] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                                                    <span className="text-sm text-[#2EC4B6]">Yükleniyor...</span>
+                                                </>
+                                            ) : formData.signatureUrls ? (
+                                                <>
+                                                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="text-sm text-green-700 font-medium truncate">
+                                                            {signatureFile?.name || 'Dosya yüklendi'}
+                                                        </span>
+                                                        <span className="text-xs text-green-500">Değiştirmek için tıklayın</span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                                    </svg>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm text-gray-500">İmza Sirküleri Yükleyiniz</span>
+                                                        <span className="text-xs text-gray-400">PDF veya resim dosyası, maks. 5 MB</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        {signatureUploadError && (
+                                            <p className="text-red-500 text-xs mt-1" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                                {signatureUploadError}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <input
@@ -619,7 +673,7 @@ const CompanySignup = () => {
 
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={!acceptedTerms || !formData.mernisNo || !formData.address || isLoading}
+                                    disabled={!acceptedTerms || !formData.mernisNo || !formData.address || !formData.city || !formData.district || !formData.postalCode || !formData.signatureUrls || isLoading || isUploadingSignature}
                                     className="w-full mt-6 px-8 py-3 rounded-lg bg-[#2EC4B6] text-white font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                     style={{ fontFamily: 'Metropolis, sans-serif' }}
                                 >
@@ -658,8 +712,8 @@ const CompanySignup = () => {
                                     <p className="font-medium text-[#202023]">{formData.signatureUrls || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm text-gray-500">Telefon Numarası</p>
-                                    <p className="font-medium text-[#202023]">{formData.requesterPhoneNumber || '-'}</p>
+                                    <p className="text-sm text-gray-500">Web Sitesi</p>
+                                    <p className="font-medium text-[#202023]">{formData.website || '-'}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-500">Adres</p>

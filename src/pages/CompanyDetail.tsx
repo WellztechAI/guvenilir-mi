@@ -317,12 +317,35 @@ const CompanyDetail = () => {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    {company.name} Hakkında Yorum Yaz
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowCommentForm(false)}
+                      className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors"
+                      aria-label="Geri dön"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                      <span className="text-sm font-medium">Geri</span>
+                    </button>
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {company.name} Hakkında Yorum Yaz
+                    </h2>
+                  </div>
                   <button
                     onClick={() => setShowCommentForm(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Kapat"
                   >
                     <svg
                       className="w-6 h-6"
@@ -425,9 +448,12 @@ const CompanyDetail = () => {
                     <button
                       type="button"
                       onClick={() => setShowCommentForm(false)}
-                      className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                      className="flex-1 py-2 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
                     >
-                      İptal
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Geri
                     </button>
                     <button
                       type="submit"

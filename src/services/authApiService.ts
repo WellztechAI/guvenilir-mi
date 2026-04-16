@@ -200,7 +200,7 @@ export interface CreateCompanyRequest {
     name: string;
     slug: string;
     description?: string;
-    phone?: string;
+    website?: string;
     sectors?: string[];
 }
 
@@ -209,7 +209,7 @@ export interface CreateCompanyResponse {
     name: string;
     slug: string;
     description?: string;
-    phone?: string;
+    website?: string;
     sectors?: string[];
     status: string;
     rating: number | null;
