@@ -54,22 +54,44 @@ const upload = multer({
 // POST /api/upload
 // ============================================
 // Tek bir dosya yüklemek için kullanılır. FormData içinde 'file' key'i ile gönderilmeli.
-router.post('/', upload.single('file'), (req, res) => {
-    try {
+router.post('/', (req, res) => {
+    console.log('[UPLOAD] Request received:', req.method, req.url);
+    console.log('[UPLOAD] Content-Type:', req.headers['content-type']);
+
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            // multer veya multer-s3 hatası
+            console.error('[UPLOAD] Multer/S3 error:', err.name, err.message, err.stack);
+            return res.status(500).json({
+                error: `Dosya yükleme hatası: ${err.message}`,
+                errorType: err.name,
+                detail: err.code || null,
+            });
+        }
+
+        console.log('[UPLOAD] File info:', req.file ? {
+            fieldname: req.file.fieldname,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            location: req.file.location,
+            key: req.file.key,
+        } : 'NO FILE');
+
         if (!req.file) {
+            console.error('[UPLOAD] No file found in request');
             return res.status(400).json({ error: 'Dosya seçilmedi veya geçersiz format.' });
         }
 
         // Başarılı yükleme, S3 URL'ini döndür
-        return res.json({
+        const responseData = {
             success: true,
             url: req.file.location,
-            filename: req.file.key
-        });
-    } catch (err) {
-        console.error('[UPLOAD] S3 Yükleme Hatası:', err.message);
-        return res.status(500).json({ error: 'Dosya yüklenirken bir hata oluştu.' });
-    }
+            filename: req.file.key,
+        };
+        console.log('[UPLOAD] Success, returning:', responseData);
+        return res.json(responseData);
+    });
 });
 
 module.exports = router;

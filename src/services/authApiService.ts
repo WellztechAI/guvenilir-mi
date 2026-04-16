@@ -291,21 +291,58 @@ export const uploadFile = async (
     file: File,
     bucket: 'avatars' | 'logos' | 'signatures' | 'uploads' = 'uploads'
 ): Promise<FileUploadResponse> => {
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const uploadUrl = `${apiBase}/api/upload`;
+
+    console.log('[UPLOAD] Starting upload:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        bucket,
+        uploadUrl,
+    });
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('bucket', bucket);
 
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/upload`, {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'File upload failed');
+    let response: Response;
+    try {
+        response = await fetch(uploadUrl, {
+            method: 'POST',
+            body: formData,
+        });
+    } catch (networkErr) {
+        console.error('[UPLOAD] Network error (fetch failed):', networkErr);
+        throw new Error(`Ağ bağlantı hatası: ${networkErr instanceof Error ? networkErr.message : String(networkErr)}`);
     }
 
-    return response.json();
+    console.log('[UPLOAD] Response status:', response.status, response.statusText);
+
+    // Response body'yi text olarak oku (JSON parse hatası varsa da görelim)
+    const rawText = await response.text();
+    console.log('[UPLOAD] Raw response body:', rawText);
+
+    if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+            const errorJson = JSON.parse(rawText);
+            errorMessage = errorJson.error || errorJson.message || errorMessage;
+            console.error('[UPLOAD] Server error response:', errorJson);
+        } catch {
+            console.error('[UPLOAD] Server returned non-JSON error:', rawText);
+        }
+        throw new Error(errorMessage);
+    }
+
+    try {
+        const result = JSON.parse(rawText) as FileUploadResponse;
+        console.log('[UPLOAD] Success:', result);
+        return result;
+    } catch (parseErr) {
+        console.error('[UPLOAD] Failed to parse success response as JSON:', rawText);
+        throw new Error('Sunucu geçersiz yanıt döndürdü.');
+    }
 };
 
 /**
