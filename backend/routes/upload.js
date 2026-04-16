@@ -26,7 +26,8 @@ const upload = multer({
     storage: multerS3({
         s3: s3Client,
         bucket: BUCKET_NAME,
-        acl: 'public-read', // Yüklenen dosyalar herkes tarafından okunabilir olacak
+        // ACL kaldırıldı: Yeni S3 bucket'larında ACL varsayılan olarak disabled.
+        // Erişim, bucket policy üzerinden yönetilmeli.
         contentType: multerS3.AUTO_CONTENT_TYPE,
         metadata: function (req, file, cb) {
             cb(null, { fieldName: file.fieldname });

@@ -470,7 +470,26 @@ export const ReviewModal: React.FC<ReviewModalProps> = ({
             </div>
           )}
 
-          <div className="flex justify-end mt-8">
+          <div className={`flex mt-8 ${step >= 2 && step < 5 ? 'justify-between items-center' : 'justify-end'}`}>
+            {/* Geri butonu - sadece step 2, 3, 4'te göster */}
+            {step >= 2 && step < 5 && (
+              <button
+                className="flex items-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors group"
+                onClick={() => {
+                  if (step === 2) setStep(1);
+                  else if (step === 3) setStep(2);
+                  else if (step === 4) setStep(3);
+                }}
+                disabled={isSubmitting}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="text-sm font-medium">Geri</span>
+              </button>
+            )}
+
+            {/* Devam / Gönder butonu */}
             <button
               className={`flex items-center gap-2 transition-colors group ${isSubmitting ? "opacity-50 cursor-not-allowed" : "text-gray-400 hover:text-gray-600"}`}
               onClick={() => {

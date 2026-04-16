@@ -139,15 +139,18 @@ router.get('/:slug', async (req, res) => {
 
 // POST /api/companies — yeni şirket oluştur
 router.post('/', async (req, res) => {
-    const { name, slug, description, phone, sectors } = req.body;
+    const { name, slug, description, phone, website, sectors } = req.body;
     if (!name || !slug) return res.status(400).json({ error: 'name ve slug zorunludur.' });
+
+    // website varsa phone kolonuna yaz (website alanı henüz DB'de yok)
+    const phoneOrWebsite = website || phone || null;
 
     try {
         const result = await pool.query(
             `INSERT INTO companies (name, slug, description, phone, sectors)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [name, slug, description || null, phone || null, sectors || []]
+            [name, slug, description || null, phoneOrWebsite, sectors || []]
         );
 
         // Cache temizle
