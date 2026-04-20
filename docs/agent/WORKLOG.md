@@ -1,3 +1,37 @@
+## 2026-04-16 - Yorum Formu Geri Butonu, İmza Sirküleri File Upload, Website Alanı
+
+- Durum: tamamlandı
+- Branch: emirhan
+- Commit(ler):
+  - 8648a7c - feat: add back button to comment modal, file upload for signature, website field in company signup
+- Amaç: CompanyDetail yorum modaline geri butonu eklemek, CompanySignup imza sirküleri alanını gerçek dosya yükleyiciye çevirmek, firma oluşturma alanında telefon yerine website eklemek ve tüm alanları zorunlu yapmak.
+- Yapılanlar:
+  - `src/pages/CompanyDetail.tsx`: Yorum formu modal header'ına chevron-left ikonu + "Geri" label'lı buton eklendi. Alt kısımdaki "İptal" butonu "Geri" ikonu ile güncellendi.
+  - `src/pages/CompanySignup.tsx`: 
+    - `requesterPhoneNumber` alanı kaldırıldı, `website` alanı eklendi (zorunlu).
+    - Step 1 "İleri" butonu tüm alanlar zorunlu koşulla güncellendi (companyName, requesterName, requesterTitle, requesterCompanyEmail, website).
+    - Step 3 imza sirküleri alanı `<input type="text">` → görsel file upload widget'ı (drag-drop-like tıklanabilir alan, upload spinner, başarı/hata durumları).
+    - Step 3 "Başvuruyu Tamamla" butonu mernisNo + address + city + district + postalCode + signatureUrls hepsi zorunlu oldu.
+    - Step 4 onay özetinde "Telefon Numarası" → "Web Sitesi" olarak güncellendi.
+    - `handleSignatureFileChange`: dosya seçildiğinde `uploadFile` service çağrılır, URL `formData.signatureUrls`'a set edilir.
+    - `handleSubmit`: `createCompany` çağrısında `phone` → `website`.
+  - `src/services/authApiService.ts`: `CreateCompanyRequest` ve `CreateCompanyResponse` interface'lerinde `phone` → `website`.
+- Test / Verify:
+  - `npx tsc --noEmit` → hata yok.
+- Riskler / Regression:
+  - Backend `POST /api/companies` endpoint'i `website` field'ını kabul etmeli; mevcut backend bu alanı zaten alıyorsa sorun yok, yoksa backend'de de güncelleme gerekebilir.
+  - `uploadFile` servisi `FileUploadResponse.url` alanını kullanıyor; backend `POST /api/upload` zaten `url: req.file.location` dönüyor — uyumlu.
+  - imza sirküleri artık zorunlu; eski formları kullanan kullanıcılar için breaking change değil (yeni form akışı).
+- Sonraki adım:
+  - Backend'de `createCompany` endpoint'inin `website` field'ını kaydettiğini doğrula.
+  - Upload endpoint'inin `signatures` bucket'ını doğru desteklediğini doğrula (backend route param yok, sadece S3 key prefix).
+- Unutmama özeti:
+  - Son yapılan: 3 dosya güncellendi, commit atıldı.
+  - Bekleyen: backend'de website alanı kontrolü.
+  - Dikkat: FileUploadResponse'daki `url` field'ı backend'den dönüyor.
+
+---
+
 ## 2026-03-03 - Proje Genel İnceleme ve Bekleyen Değişikliklerin Commit Edilmesi
 
 - Durum: tamamlandı
